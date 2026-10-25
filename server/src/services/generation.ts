@@ -281,7 +281,10 @@ export class GenerationService {
     }
     let parsed: ReturnType<typeof arcSummarySchema.safeParse>;
     try {
-      parsed = arcSummarySchema.safeParse(JSON.parse(outcome.response.text));
+      const raw = JSON.parse(outcome.response.text) as { summary?: unknown };
+      // Soft limit, as for chapter summaries: clip instead of discarding (SPEC §2.2).
+      if (typeof raw?.summary === 'string' && [...raw.summary].length > 300) raw.summary = [...raw.summary].slice(0, 300).join('');
+      parsed = arcSummarySchema.safeParse(raw);
     } catch {
       parsed = arcSummarySchema.safeParse(null);
     }

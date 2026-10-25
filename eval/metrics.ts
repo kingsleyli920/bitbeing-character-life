@@ -41,6 +41,15 @@ export interface StoryMetrics {
   traitChanges: number;
   arcSummaries: number;
   directionChapters: number;
+  /** Long-story pacing: are threads resolved, or do they hang forever? */
+  pacing: {
+    threadsResolved: number;
+    threadsOpen: number;
+    resolutionRate: number;
+    oldestOpenThreadAge: number;
+    arcsSayingUnresolved: number;
+    distinctLocations: number;
+  };
 }
 
 /** Engineering metrics that can be computed automatically (story quality still needs reading). */
@@ -68,7 +77,9 @@ export function storyMetrics(dbPath: string, storyId: string): StoryMetrics {
       cost_usd: number | null;
       cost_source: string;
     }[];
-    const memories = db.prepare('SELECT kind, status FROM memories WHERE story_id = ?').all(storyId) as { kind: string; status: string }[];
+    const memories = db.prepare('SELECT kind, status, first_chapter FROM memories WHERE story_id = ?').all(storyId) as { kind: string; status: string; first_chapter: number }[];
+    const arcTexts = (db.prepare('SELECT summary FROM arc_summaries WHERE story_id = ?').all(storyId) as { summary: string }[]).map((a) => a.summary);
+    const locations = new Set((db.prepare('SELECT location FROM chapters WHERE story_id = ?').all(storyId) as { location: string }[]).map((r) => r.location.split(/[，,、]/)[0]!.trim()));
     const traits = db.prepare('SELECT COUNT(*) AS n FROM trait_changes WHERE story_id = ?').get(storyId) as { n: number };
     const arcs = db.prepare('SELECT COUNT(*) AS n FROM arc_summaries WHERE story_id = ?').get(storyId) as { n: number };
 
@@ -124,6 +135,19 @@ export function storyMetrics(dbPath: string, storyId: string): StoryMetrics {
       traitChanges: traits.n,
       arcSummaries: arcs.n,
       directionChapters: chapters.filter((c) => c.direction_id).length,
+      pacing: (() => {
+        const tracked = memories.filter((m) => m.kind === 'thread' || m.kind === 'promise');
+        const resolved = tracked.filter((m) => m.status === 'resolved').length;
+        const openOnes = tracked.filter((m) => m.status === 'open');
+        return {
+          threadsResolved: resolved,
+          threadsOpen: openOnes.length,
+          resolutionRate: tracked.length ? Number((resolved / tracked.length).toFixed(2)) : 0,
+          oldestOpenThreadAge: openOnes.length ? chapters.length - Math.min(...openOnes.map((m) => m.first_chapter)) : 0,
+          arcsSayingUnresolved: arcTexts.filter((t) => /仍未|尚未|未确认|未被证实|均未/.test(t)).length,
+          distinctLocations: locations.size,
+        };
+      })(),
     };
   } finally {
     db.close();

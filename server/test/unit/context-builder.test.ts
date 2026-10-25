@@ -204,3 +204,33 @@ describe('assembleContext', () => {
     expect(ctx.budgetTokens).toBe(12_000);
   });
 });
+
+describe('long-story pacing rules', () => {
+  const thread = (key: string, firstChapter: number, sourceChapters: number[], importance = 2) =>
+    mem({ key, kind: 'thread', status: 'open', importance, firstChapter, sourceChapters, lastChapter: sourceChapters.at(-1)! });
+
+  it('asks to resolve important threads that have been open for 12+ segments', () => {
+    const memories = [thread('取件人是谁', 3, [3, 10, 20, 29]), thread('新的小事', 25, [25]), thread('不重要的旧事', 2, [2], 1)];
+    const ctx = build(data({ chapterNumber: 30, chapterDigests: digests(29), memories }));
+    expect(ctx.user).toMatch(/【需要收束的线索】[\s\S]*取件人是谁（已悬 27 章）/);
+    expect(ctx.user).not.toMatch(/【需要收束的线索】[^【]*新的小事/);
+    expect(ctx.user).not.toMatch(/【需要收束的线索】[^【]*不重要的旧事/);
+    expect(ctx.sections.map((s) => s.id)).toContain('stale_threads');
+  });
+
+  it('asks not to open new threads when more than 10 are open', () => {
+    const many = Array.from({ length: 11 }, (_, i) => thread(`线索${i}`, 18, [18]));
+    const ctx = build(data({ chapterNumber: 20, chapterDigests: digests(19), memories: many }));
+    expect(ctx.user).toContain('本章不要再开新的线索');
+    const few = build(data({ chapterNumber: 20, chapterDigests: digests(19), memories: many.slice(0, 5) }));
+    expect(few.user).not.toContain('本章不要再开新的线索');
+  });
+
+  it('suggests rotating focus when one thread dominated the last 8 segments', () => {
+    const memories = [thread('收音机的秘密', 12, [12, 13, 14, 15, 16, 19])];
+    const ctx = build(data({ chapterNumber: 20, chapterDigests: digests(19), memories }));
+    expect(ctx.user).toMatch(/最近 8 章里有 6 章都围绕「收音机的秘密」/);
+    const balanced = build(data({ chapterNumber: 20, chapterDigests: digests(19), memories: [thread('收音机的秘密', 12, [12, 15, 19])] }));
+    expect(balanced.user).not.toContain('都围绕');
+  });
+});
