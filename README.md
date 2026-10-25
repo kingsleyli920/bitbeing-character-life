@@ -68,7 +68,7 @@ npm run test:all             # 以上全部（typecheck → Vitest → Playwrigh
 
 视觉基线在 macOS 上生成（文件名带 `-darwin`），其他系统第一次运行会提示缺少基线。
 
-最近一次完整运行结果见 [docs/EVALUATION.md](docs/EVALUATION.md#测试运行记录)。
+最近一次完整运行结果见 [docs/EVALUATION.md](docs/EVALUATION.md#9-测试运行记录)。
 
 ### 真实模型评测（花钱，不在 `test:all` 里）
 

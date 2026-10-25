@@ -17,3 +17,4 @@ eval/out/*
 *.pdf
 .playwright-mcp/
 !demo/demo.db
+!docs/ARCHITECTURE.pdf

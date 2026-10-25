@@ -45,11 +45,22 @@ tr { break-inside: avoid; }
 th, td { border: 1px solid #d8ccb9; padding: 4pt 6pt; vertical-align: top; text-align: left; }
 th { background: #efe6d5; }
 th:first-child, td:first-child { min-width: 4.5em; }
-img { max-width: 100%; border: 1px solid #d8ccb9; border-radius: 6px; margin: 6pt 0; }
+figure { margin: 10pt 0 12pt; text-align: center; break-inside: avoid; }
+figure img { display: block; margin: 0 auto; max-width: 100%; max-height: 150mm; width: auto; height: auto;
+  border: 1px solid #d8ccb9; border-radius: 6px; }
+figcaption { margin-top: 4pt; font-size: 8.5pt; color: #8c8079; }
 hr { border: none; border-top: 1px solid #e3d8c6; margin: 14pt 0; }
 .meta { color: #8c8079; font-size: 9pt; margin-bottom: 14pt; }
 `;
 
+// Images become figures with their alt text as the caption.
+marked.use({
+  renderer: {
+    image({ href, text }) {
+      return `<figure><img src="${href}" alt="${text}"><figcaption>${text}</figcaption></figure>`;
+    },
+  },
+});
 const body = await marked.parse(markdown, { gfm: true });
 const html = `<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><base href="${pathToFileURL(path.dirname(input))}/">
 <title>${title}</title><style>${css}</style></head><body>
