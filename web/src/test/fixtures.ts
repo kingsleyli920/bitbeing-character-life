@@ -36,6 +36,21 @@ export function makeStory(over: Partial<StoryDetail> = {}): StoryDetail {
       personality: '嘴贫讲义气',
       narrativeStyle: 'novel',
     },
+    profile: {
+      status: 'ready',
+      profile: {
+        fields: [
+          { key: 'name', value: '周野', source: 'original', reason: '' },
+          { key: 'age', value: '27 岁', source: 'original', reason: '' },
+          { key: 'economy', value: '手头不宽裕', source: 'inferred', reason: '每月还父亲一万八' },
+          { key: 'signature', value: '手腕上一根旧皮编手绳', source: 'imagined', reason: '与鼓手身份相关' },
+        ],
+        model: 'fixture',
+        createdAt: '2026-10-24T09:00:00.000Z',
+      },
+      error: null,
+    },
+    profileFrozen: false,
     state: null,
     chapterCount: 0,
     version: 0,

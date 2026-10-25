@@ -14,7 +14,7 @@ export const useStory = (storyId: string) =>
   useQuery({
     queryKey: ['story', storyId],
     queryFn: () => api.getStory(storyId),
-    refetchInterval: (q) => (q.state.data?.activeJob ? POLL_MS : false),
+    refetchInterval: (q) => (q.state.data?.activeJob || q.state.data?.profile.status === 'pending' ? POLL_MS : false),
   });
 
 export const useMemory = (storyId: string, version: number | undefined) =>

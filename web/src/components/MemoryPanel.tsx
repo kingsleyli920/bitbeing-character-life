@@ -6,8 +6,8 @@ function Sources({ numbers, onJump }: { numbers: number[]; onJump: (n: number) =
   return (
     <span className="sources">
       {numbers.map((n) => (
-        <button key={n} type="button" className="source-link" onClick={() => onJump(n)} aria-label={`跳到第 ${n} 章`}>
-          第{n}章
+        <button key={n} type="button" className="source-link" onClick={() => onJump(n)} aria-label={`跳到第 ${n} 段`}>
+          第{n}段
         </button>
       ))}
     </span>
@@ -53,10 +53,10 @@ export function MemoryPanel({ storyId, version, onJump }: { storyId: string; ver
         <summary>
           记忆 <span className="count">{total}</span>
         </summary>
-        <p className="muted small">模型每写一章都会更新这些记录；点章节号可以回到原文。</p>
+        <p className="muted small">每写一段都会更新这些记录；点「第 N 段」可以回到原文。</p>
         {memory.isPending && <Loading />}
         {memory.isError && <ErrorBox error={memory.error} onRetry={() => void memory.refetch()} />}
-        {memory.data && total === 0 && memory.data.traitChanges.length === 0 && <p className="muted small">还没有记忆，写完第一章后出现。</p>}
+        {memory.data && total === 0 && memory.data.traitChanges.length === 0 && <p className="muted small">还没有记忆，写完第一段后出现。</p>}
         {memory.data && (
           <>
             <Group title="未解决的承诺与线索" items={groupMemory(memory.data).open} onJump={onJump} open />
@@ -72,7 +72,7 @@ export function MemoryPanel({ storyId, version, onJump }: { storyId: string; ver
                   {memory.data.traitChanges.map((t, i) => (
                     <li key={i} className="memory-item">
                       <p className="memory-key">
-                        第{t.chapterNumber}章 · {t.trait}：{t.from} → {t.to}
+                        第{t.chapterNumber}段 · {t.trait}：{t.from} → {t.to}
                       </p>
                       <p className="memory-content">{t.explanation}</p>
                       <Sources numbers={t.causeChapters} onJump={onJump} />
@@ -90,7 +90,7 @@ export function MemoryPanel({ storyId, version, onJump }: { storyId: string; ver
                   {memory.data.arcSummaries.map((a) => (
                     <li key={a.fromChapter} className="memory-item">
                       <p className="memory-key">
-                        第{a.fromChapter}–{a.toChapter}章
+                        第{a.fromChapter}–{a.toChapter}段
                       </p>
                       <p className="memory-content">{a.summary}</p>
                     </li>

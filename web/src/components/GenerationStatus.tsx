@@ -27,7 +27,7 @@ export function GenerationStatus({
       <div className="gen-status gen-running" role="status" aria-live="polite">
         <span className="spinner" aria-hidden="true" />
         <span>
-          正在写第 {activeJob.targetChapter} 章 · 已等待 {elapsedSeconds(activeJob, now)} 秒
+          正在写第 {activeJob.targetChapter} 段 · 已等待 {elapsedSeconds(activeJob, now)} 秒
           {activeJob.attempts > 1 && `（第 ${activeJob.attempts} 次尝试）`}
         </span>
       </div>
@@ -49,10 +49,10 @@ export function GenerationStatus({
     return (
       <div className="gen-status gen-failed" role="alert">
         <p className="state-title">
-          第 {lastJob.targetChapter} 章没有写成：{lastJob.errorCode ? JOB_ERROR_MESSAGES[lastJob.errorCode] : '生成失败'}
+          第 {lastJob.targetChapter} 段没有写成：{lastJob.errorCode ? JOB_ERROR_MESSAGES[lastJob.errorCode] : '生成失败'}
         </p>
         {lastJob.errorMessage && <p className="state-detail">{lastJob.errorMessage}</p>}
-        <p className="muted small">已有章节和记忆没有受影响。尝试了 {lastJob.attempts} 次。</p>
+        <p className="muted small">已有的段落和记忆没有受影响。尝试了 {lastJob.attempts} 次。</p>
         <button type="button" className="btn btn-ghost" onClick={onRetry}>
           重试
         </button>

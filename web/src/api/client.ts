@@ -10,6 +10,7 @@ import {
   jobResponseSchema,
   memoryResponseSchema,
   type OpenStoryRequest,
+  profileStateSchema,
   storyDetailSchema,
   tocResponseSchema,
 } from '@cl/shared';
@@ -74,6 +75,8 @@ export function createApiClient(baseUrl = '') {
     openStory: (characterId: string, input: OpenStoryRequest = {}) =>
       request(storyDetailSchema, url(`/characters/${id(characterId)}/stories`), jsonInit('POST', input)),
     getStory: (storyId: string) => request(storyDetailSchema, url(`/stories/${id(storyId)}`)),
+    completeProfile: (characterId: string) =>
+      request(profileStateSchema, url(`/characters/${id(characterId)}/profile`), { method: 'POST' }),
     listChapters: (storyId: string, opts: { from?: number; limit?: number } = {}) => {
       const query = new URLSearchParams();
       if (opts.from !== undefined) query.set('from', String(opts.from));

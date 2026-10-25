@@ -8,7 +8,7 @@ export function Header() {
       <Link className="brand" to="/">
         角色人生
       </Link>
-      <span className="site-subtitle">一个人的生活，一章一章地发生</span>
+      <span className="site-subtitle">一个人的生活，一段一段地发生</span>
       <span className="header-spacer" />
       {meta.data?.provider === 'fixture' && (
         <span className="badge" title="使用确定性假模型，内容不是 AI 生成">
