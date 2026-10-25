@@ -7,9 +7,14 @@ import { clearAll, type Db, openDb } from './db/open.js';
 import type { AppDeps } from './deps.js';
 import { registerErrorHandler } from './http-errors.js';
 import { seedPresets } from './presets/index.js';
+import { createFixtureProvider } from './model/fixture.js';
+import { createOpenRouterProvider } from './model/openrouter.js';
+import { MODEL_PRICING } from './model/pricing.js';
+import type { ModelProvider } from './model/provider.js';
 import { totalSpentUsd } from './repos/jobs.js';
 import { characterRoutes } from './routes/characters.js';
 import { storyRoutes } from './routes/stories.js';
+import { GenerationService } from './services/generation.js';
 
 export interface BuildAppOptions {
   config: AppConfig;
@@ -17,9 +22,26 @@ export interface BuildAppOptions {
   db?: Db;
   now?: () => string;
   logger?: boolean;
+  /** Defaults to the provider named by `config.provider`. */
+  provider?: ModelProvider;
+  /** Retry backoff wait; tests pass a no-op. */
+  sleep?: (ms: number) => Promise<void>;
 }
 
-export async function buildApp({ config, db: givenDb, now = () => new Date().toISOString(), logger = false }: BuildAppOptions): Promise<FastifyInstance> {
+export function providerFromConfig(config: AppConfig): ModelProvider {
+  return config.provider === 'fixture'
+    ? createFixtureProvider({ delayMs: config.fixtureDelayMs })
+    : createOpenRouterProvider({ apiKey: config.openrouterApiKey, pricing: MODEL_PRICING, reasoningEffort: 'low' });
+}
+
+export async function buildApp({
+  config,
+  db: givenDb,
+  now = () => new Date().toISOString(),
+  logger = false,
+  provider = providerFromConfig(config),
+  sleep,
+}: BuildAppOptions): Promise<FastifyInstance> {
   const db = givenDb ?? openDb(config.dbPath);
   seedPresets(db, now());
   const deps: AppDeps = { config, db, now };
@@ -32,7 +54,13 @@ export async function buildApp({ config, db: givenDb, now = () => new Date().toI
     bodyLimit: 64 * 1024,
   });
   registerErrorHandler(app);
-  if (!givenDb) app.addHook('onClose', async () => db.close());
+  const generation = new GenerationService({ ...deps, provider, logger: app.log, ...(sleep && { sleep }) });
+  generation.recoverInterrupted();
+  app.decorate('generation', generation);
+  app.addHook('onClose', async () => {
+    await generation.shutdown();
+    if (!givenDb) db.close();
+  });
 
   app.get('/api/health', async (): Promise<HealthResponse> => ({ ok: true }));
 
@@ -47,10 +75,11 @@ export async function buildApp({ config, db: givenDb, now = () => new Date().toI
   );
 
   characterRoutes(app, deps);
-  storyRoutes(app, deps);
+  storyRoutes(app, deps, generation);
 
   if (config.appEnv === 'test') {
     app.post('/api/__test__/reset', async (_req, reply) => {
+      await generation.idle();
       clearAll(db);
       seedPresets(db, now());
       return reply.code(204).send();
@@ -72,3 +101,9 @@ export async function buildApp({ config, db: givenDb, now = () => new Date().toI
   return app;
 }
 
+
+declare module 'fastify' {
+  interface FastifyInstance {
+    generation: GenerationService;
+  }
+}

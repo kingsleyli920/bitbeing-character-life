@@ -1,12 +1,17 @@
 import {
+  chaptersResponseSchema,
   characterDetailSchema,
   characterListResponseSchema,
   errorResponseSchema,
   type ImportCharacterRequest,
   importCharacterResponseSchema,
   metaResponseSchema,
+  directionResponseSchema,
+  jobResponseSchema,
+  memoryResponseSchema,
   type OpenStoryRequest,
   storyDetailSchema,
+  tocResponseSchema,
 } from '@cl/shared';
 import { z } from 'zod';
 
@@ -69,6 +74,24 @@ export function createApiClient(baseUrl = '') {
     openStory: (characterId: string, input: OpenStoryRequest = {}) =>
       request(storyDetailSchema, url(`/characters/${id(characterId)}/stories`), jsonInit('POST', input)),
     getStory: (storyId: string) => request(storyDetailSchema, url(`/stories/${id(storyId)}`)),
+    listChapters: (storyId: string, opts: { from?: number; limit?: number } = {}) => {
+      const query = new URLSearchParams();
+      if (opts.from !== undefined) query.set('from', String(opts.from));
+      if (opts.limit !== undefined) query.set('limit', String(opts.limit));
+      const qs = query.toString();
+      return request(chaptersResponseSchema, url(`/stories/${id(storyId)}/chapters${qs ? `?${qs}` : ''}`));
+    },
+    getToc: (storyId: string) => request(tocResponseSchema, url(`/stories/${id(storyId)}/toc`)),
+    getMemory: (storyId: string) => request(memoryResponseSchema, url(`/stories/${id(storyId)}/memory`)),
+    setDirection: (storyId: string, text: string) =>
+      request(directionResponseSchema, url(`/stories/${id(storyId)}/direction`), jsonInit('PUT', { text })),
+    clearDirection: (storyId: string) =>
+      request(z.undefined(), url(`/stories/${id(storyId)}/direction`), { method: 'DELETE' }),
+    createJob: (storyId: string, requestId: string) =>
+      request(jobResponseSchema, url(`/stories/${id(storyId)}/jobs`), jsonInit('POST', { requestId })),
+    getJob: (storyId: string, jobId: string) =>
+      request(jobResponseSchema, url(`/stories/${id(storyId)}/jobs/${id(jobId)}`)),
+    exportUrl: (storyId: string) => url(`/stories/${id(storyId)}/export.md`),
   };
 }
 
