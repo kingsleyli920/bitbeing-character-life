@@ -6,6 +6,7 @@ import {
   memoryStatusSchema,
   storyStateSchema,
 } from './draft.js';
+import { profileStateSchema } from './profile.js';
 import './zod-locale.js';
 
 const isoTime = z.string();
@@ -51,6 +52,7 @@ export const characterDetailSchema = z.object({
   id: z.string(),
   source: z.enum(['preset', 'import']),
   card: characterCardSchema,
+  profile: profileStateSchema,
   createdAt: isoTime,
   stories: z.array(storySummarySchema),
 });
@@ -163,6 +165,9 @@ export const storyDetailSchema = z.object({
   id: z.string(),
   characterId: z.string(),
   card: characterCardSchema,
+  /** The profile this story uses: its frozen snapshot once chapter 1 exists, otherwise the character's current one. */
+  profile: profileStateSchema,
+  profileFrozen: z.boolean(),
   state: storyStateSchema.nullable(),
   chapterCount: z.number().int(),
   version: z.number().int(),
