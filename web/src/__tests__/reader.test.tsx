@@ -136,3 +136,38 @@ describe('Reader', () => {
     expect(screen.getByText('故事不存在')).toBeInTheDocument();
   });
 });
+
+describe('Reader navigation', () => {
+  it('jumps to a chapter from the table of contents', async () => {
+    installStoryBackend({ chapters: Array.from({ length: 12 }, (_, i) => makeChapter(i + 1)) });
+    server.use(
+      http.get(`/api/stories/${STORY_ID}/toc`, () =>
+        HttpResponse.json({ items: Array.from({ length: 12 }, (_, i) => ({ number: i + 1, title: `第${i + 1}章的标题`, storyTime: `第${i + 1}天` })) }),
+      ),
+    );
+    const user = userEvent.setup();
+    open();
+    await user.click(await screen.findByRole('button', { name: '目录' }));
+    const toc = screen.getByRole('dialog', { name: '目录 · 共 12 章' });
+    await user.click(await within(toc).findByRole('button', { name: /第 1 章\s*第1章的标题/ }));
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: '第1章的标题' })).toBeInTheDocument();
+  });
+
+  it('offers export and starting a new story', async () => {
+    installStoryBackend({ chapters: [makeChapter(1)] });
+    let created = 0;
+    server.use(
+      http.post('/api/characters/zhou-ye/stories', () => {
+        created++;
+        return HttpResponse.json({ code: 'STOP', message: 'stop' }, { status: 500 });
+      }),
+    );
+    const user = userEvent.setup();
+    open();
+    expect(await screen.findByRole('link', { name: '导出' })).toHaveAttribute('href', `/api/stories/${STORY_ID}/export.md`);
+    await user.click(screen.getByText('故事'));
+    await user.click(screen.getByRole('button', { name: '开始一个新故事' }));
+    await waitFor(() => expect(created).toBe(1));
+  });
+});
