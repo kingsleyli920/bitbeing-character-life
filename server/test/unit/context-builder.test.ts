@@ -1,4 +1,4 @@
-import type { CharacterCard } from '@cl/shared';
+import type { CharacterCard, LifeArea } from '@cl/shared';
 import { describe, expect, it } from 'vitest';
 import {
   assembleContext,
@@ -29,7 +29,25 @@ const mem = (over: Partial<ContextMemory> & Pick<ContextMemory, 'key'>): Context
 function digests(n: number, summary = (i: number) => `第${i}章发生了一些普通的事情。`) {
   return Array.from({ length: n }, (_, k) => {
     const i = k + 1;
-    return { number: i, title: `标题${i}`, summary: summary(i), beatTags: [`桥段${i}`], daysSincePrevious: 3 as number | null };
+    return {
+      number: i,
+      title: `标题${i}`,
+      summary: summary(i),
+      beatTags: [`桥段${i}`],
+      daysSincePrevious: 3 as number | null,
+      storyDate: null as string | null,
+      lifeAreas: [] as LifeArea[],
+    };
+  });
+}
+
+/** Digests written with prompt v5: chapter 1 starts on 2026-06-01, then `days(i)` days between chapters. */
+function dated(n: number, days: (i: number) => number = () => 3, areas: (i: number) => LifeArea[] = () => ['工作学业']) {
+  let date = Date.parse('2026-06-01T00:00:00Z');
+  return digests(n).map((d) => {
+    const gap = d.number === 1 ? 0 : days(d.number);
+    date += gap * 86_400_000;
+    return { ...d, daysSincePrevious: gap, storyDate: new Date(date).toISOString().slice(0, 10), lifeAreas: areas(d.number) };
   });
 }
 
@@ -226,14 +244,46 @@ describe('long-story pacing rules', () => {
     expect(few.user).not.toContain('本章不要再开新的线索');
   });
 
-  it('asks to move time forward when the last 5 chapters covered under 3 days', () => {
-    const slow = digests(19).map((d) => ({ ...d, daysSincePrevious: 0 }));
-    const ctx = build(data({ chapterNumber: 20, chapterDigests: slow }));
-    expect(ctx.user).toMatch(/最近 5 章在故事里只过去了约 0 天/);
+  it('also asks to settle small promises that have been open for 12+ segments', () => {
+    const promise = mem({ key: '答应留意退信', kind: 'promise', status: 'open', importance: 1, firstChapter: 5, sourceChapters: [5], lastChapter: 5 });
+    const ctx = build(data({ chapterNumber: 30, chapterDigests: digests(29), memories: [promise] }));
+    expect(ctx.user).toMatch(/【需要收束的线索】[\s\S]*答应留意退信（已悬 25 章）/);
+  });
+
+  it('asks to jump forward 1–4 weeks when the last 5 chapters covered under a week', () => {
+    const slow = build(data({ chapterNumber: 20, chapterDigests: dated(19, () => 1) }));
+    expect(slow.user).toMatch(/最近 5 章在故事里只过去了 5 天[^\n]*1–4 周/);
+    const legacy = digests(19).map((d) => ({ ...d, daysSincePrevious: 0 }));
+    const ctx = build(data({ chapterNumber: 20, chapterDigests: legacy }));
+    expect(ctx.user).toMatch(/最近 5 章在故事里只过去了 0 天/);
     const fast = build(data({ chapterNumber: 20, chapterDigests: digests(19) }));
     expect(fast.user).not.toContain('在故事里只过去了');
     const unknown = build(data({ chapterNumber: 20, chapterDigests: digests(19).map((d) => ({ ...d, daysSincePrevious: null })) }));
     expect(unknown.user).not.toContain('在故事里只过去了');
+  });
+
+  it('suggests a bigger jump at the start of a new volume unless one just happened', () => {
+    const ctx = build(data({ chapterNumber: 21, chapterDigests: dated(20) }));
+    expect(ctx.user).toContain('新的一卷');
+    expect(build(data({ chapterNumber: 20, chapterDigests: dated(19) })).user).not.toContain('新的一卷');
+    const jumped = build(data({ chapterNumber: 21, chapterDigests: dated(20, (i) => (i === 18 ? 20 : 3)) }));
+    expect(jumped.user).not.toContain('新的一卷');
+  });
+
+  it('asks for another part of life when one life area led 5+ of the last 10 chapters', () => {
+    const areas = (i: number): LifeArea[] => (i >= 10 && i % 3 !== 0 ? ['旧事秘密', '家人'] : ['家人', '工作学业']);
+    const ctx = build(data({ chapterNumber: 20, chapterDigests: dated(19, undefined, areas) }));
+    const line = ctx.user.split('\n').find((l) => l.includes('的主线是「旧事秘密」'));
+    expect(line).toMatch(/最近 10 章里有 \d+ 章的主线是「旧事秘密」/);
+    // Suggests areas that have not come up at all, never the dominant one.
+    expect(line).toContain('「钱」');
+    expect(line).not.toMatch(/放在[^。]*「旧事秘密」/);
+    const balanced = build(data({ chapterNumber: 20, chapterDigests: dated(19, undefined, (i) => [(['工作学业', '朋友', '家人'] as const)[i % 3]!]) }));
+    expect(balanced.user).not.toContain('的主线是');
+    expect(build(data({ chapterNumber: 20, chapterDigests: digests(19) })).user).not.toContain('的主线是');
+    // The reader's direction wins: no rotation hint while one is active.
+    const directed = build(data({ chapterNumber: 20, chapterDigests: dated(19, undefined, areas), direction: { text: '更多的感情故事', chaptersActive: 3 } }));
+    expect(directed.user).not.toContain('的主线是');
   });
 
   it('suggests rotating focus when one thread dominated the last 8 segments', () => {
@@ -242,5 +292,25 @@ describe('long-story pacing rules', () => {
     expect(ctx.user).toMatch(/最近 8 章里有 6 章都围绕「收音机的秘密」/);
     const balanced = build(data({ chapterNumber: 20, chapterDigests: digests(19), memories: [thread('收音机的秘密', 12, [12, 15, 19])] }));
     expect(balanced.user).not.toContain('都围绕');
+  });
+});
+
+describe('story calendar section', () => {
+  it('asks chapter 1 to pick a start date that fits the card', () => {
+    const ctx = build(data({ chapterNumber: 1, previousChapter: null, chapterDigests: [] }));
+    expect(ctx.user).toMatch(/【故事日历】\n[^【]*storyDate/);
+    expect(ctx.sections.map((s) => s.id)).toContain('calendar');
+  });
+
+  it('shows the previous date, the story day count and a weekday lookup', () => {
+    const ctx = build(data({ chapterNumber: 5, chapterDigests: dated(4, () => 4) }));
+    // 2026-06-01 + 3 × 4 days = 2026-06-13, story day 13.
+    expect(ctx.user).toContain('上一章开始于 2026年6月13日 星期六（故事第 13 天）');
+    expect(ctx.user).toContain('7 天后：2026-06-20 星期六');
+  });
+
+  it('lets a story written before dates existed pick a date freely', () => {
+    const ctx = build(data({ chapterNumber: 5, chapterDigests: digests(4) }));
+    expect(ctx.user).toMatch(/【故事日历】\n前面的章节没有记录日期/);
   });
 });

@@ -73,3 +73,42 @@ describe('parseDraft soft limits', () => {
     expect(parseDraft(JSON.stringify(draft), ctx).ok).toBe(false);
   });
 });
+
+describe('parseDraft story calendar', () => {
+  // makeDraft() starts on 2026-10-14, a Wednesday, and its storyTime says 周三.
+  it('derives the days elapsed from the previous chapter date', () => {
+    expect(parseDraft(JSON.stringify(makeDraft()), { ...ctx, previousDate: '2026-10-10' })).toMatchObject({ ok: true, daysSincePrevious: 4 });
+    expect(parseDraft(JSON.stringify(makeDraft()), { ...ctx, previousDate: '2026-10-14' })).toMatchObject({ ok: true, daysSincePrevious: 0 });
+  });
+
+  it('counts zero days for the first chapter and for stories written before dates existed', () => {
+    expect(parseDraft(JSON.stringify(makeDraft()), { ...ctx, previousDate: null })).toMatchObject({ ok: true, daysSincePrevious: 0 });
+  });
+
+  it('rejects a date earlier than the previous chapter', () => {
+    expect(parseDraft(JSON.stringify(makeDraft()), { ...ctx, previousDate: '2026-10-15' })).toMatchObject({
+      ok: false,
+      message: expect.stringContaining('storyDate'),
+    });
+  });
+
+  it('rejects a storyTime whose weekday does not match the date', () => {
+    const result = parseDraft(JSON.stringify(makeDraft({ storyTime: '周二夜里' })), ctx);
+    expect(result).toMatchObject({ ok: false, message: expect.stringContaining('星期三') });
+  });
+});
+
+describe('parseDraft stray English words', () => {
+  it('rejects an English word in the summary that the chapter never uses', () => {
+    const draft = makeDraft({ summary: '周野终于 answer 了老曾的要求，答应明天中午前报出主唱的名字，可他心里一个人选都没有。' });
+    expect(parseDraft(JSON.stringify(draft), ctx)).toMatchObject({ ok: false, message: expect.stringContaining('answer') });
+  });
+
+  it('allows English words that appear in the body or in the context the model was given', () => {
+    const body = `${'雨下得很大，周野把电动车停在 livehouse 门口。'.repeat(30)}`;
+    const inBody = makeDraft({ body, summary: '周野在 livehouse 门口被老曾限期报出主唱名字，否则专场取消。他找不到人选。' });
+    expect(parseDraft(JSON.stringify(inBody), ctx).ok).toBe(true);
+    const fromCard = makeDraft({ summary: '周野给 Mia 打电话，被老曾限期报出主唱名字，否则专场取消。他找不到人选。' });
+    expect(parseDraft(JSON.stringify(fromCard), { ...ctx, referenceText: '前队友 Mia（贝斯手）' }).ok).toBe(true);
+  });
+});
