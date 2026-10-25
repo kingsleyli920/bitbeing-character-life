@@ -232,7 +232,7 @@ describe('Navigating long stories', () => {
     installStoryBackend({ chapters: Array.from({ length: 12 }, (_, i) => makeChapter(i + 1)) });
     server.use(
       http.get(`/api/stories/${STORY_ID}/toc`, () =>
-        HttpResponse.json({ items: Array.from({ length: 12 }, (_, i) => ({ number: i + 1, title: `第${i + 1}章的标题`, storyTime: `第${i + 1}天` })) }),
+        HttpResponse.json({ items: Array.from({ length: 12 }, (_, i) => ({ number: i + 1, title: `第${i + 1}章的标题`, storyTime: `第${i + 1}天`, storyDate: null })) }),
       ),
     );
     const user = userEvent.setup();

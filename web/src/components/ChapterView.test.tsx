@@ -22,4 +22,11 @@ describe('ChapterView', () => {
     expect(screen.getByText('本段走向：让她遇到一次挫折')).toBeInTheDocument();
     expect(screen.getByText('众筹页被 CEO 全部推翻')).toBeInTheDocument();
   });
+
+  it('shows the story date with its weekday when the chapter has one', () => {
+    const { rerender } = render(<ChapterView chapter={makeChapter(4, { storyDate: '2026-06-13', storyTime: '傍晚', location: '上海' })} />);
+    expect(screen.getByText('2026年6月13日 星期六 · 傍晚 · 上海')).toBeInTheDocument();
+    rerender(<ChapterView chapter={makeChapter(4, { storyDate: null, storyTime: '梅雨季的傍晚', location: '上海' })} />);
+    expect(screen.getByText('梅雨季的傍晚 · 上海')).toBeInTheDocument();
+  });
 });
