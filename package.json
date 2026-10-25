@@ -35,6 +35,7 @@
     "test:fast": "vitest run",
     "test:all": "npm run typecheck && vitest run && playwright test",
     "eval": "tsx eval/run.ts",
+    "eval:audit": "tsx eval/audit.ts",
     "docs:pdf": "tsx scripts/build-pdf.ts docs/ARCHITECTURE.md"
   },
   "devDependencies": {

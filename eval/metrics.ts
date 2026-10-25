@@ -1,4 +1,5 @@
 import { DatabaseSync } from 'node:sqlite';
+import { daysBetween, weekdayMentioned, weekdayOf } from '@cl/shared';
 
 const percentile = (xs: number[], p: number) => {
   if (!xs.length) return null;
@@ -25,7 +26,7 @@ export interface StoryMetrics {
   bodyChars: { min: number; avg: number; max: number };
   jobs: Record<string, number>;
   jobsNeedingRetry: number;
-  calls: { chapter: Record<string, number>; arc: Record<string, number> };
+  calls: { chapter: Record<string, number>; arc: Record<string, number>; consistency: Record<string, number> };
   latencyMs: { p50: number | null; p95: number | null; max: number | null };
   tokens: { input: number; output: number; reasoning: number };
   costUsd: { total: number; reported: number; estimated: number; unknownCalls: number };
@@ -52,6 +53,31 @@ export interface StoryMetrics {
     /** Sum of daysSincePrevious (null when chapters predate prompt v4). */
     storyDays: number | null;
   };
+  /** Story calendar (prompt v5): null fields when chapters have no dates. */
+  calendar: {
+    firstDate: string | null;
+    lastDate: string | null;
+    /** Days from the first chapter's date to the last one's, inclusive. */
+    spanDays: number | null;
+    jumpsOver7Days: number;
+    maxJumpDays: number;
+    /** storyTime names a weekday that does not match the date. */
+    weekdayMismatches: number;
+  };
+  /** Main life area (first of lifeAreas) per chapter (prompt v5). */
+  lifeAreas: {
+    main: Record<string, number>;
+    topShare: number;
+    /** Highest share of one main area in any 10 consecutive chapters. */
+    maxWindowShare: number;
+  };
+  /** Consistency check (SPEC §2.7), from job warnings and rejected chapter calls. */
+  consistency: {
+    rewrites: number;
+    hardIssuesFound: number;
+    softWarnings: number;
+    savedWithHardIssues: number;
+  };
 }
 
 /** Engineering metrics that can be computed automatically (story quality still needs reading). */
@@ -59,19 +85,31 @@ export function storyMetrics(dbPath: string, storyId: string): StoryMetrics {
   const db = new DatabaseSync(dbPath, { readOnly: true });
   try {
     const chapters = db
-      .prepare('SELECT number, title, body, beat_tags, direction_id, days_since_previous FROM chapters WHERE story_id = ? ORDER BY number')
-      .all(storyId) as { number: number; title: string; body: string; beat_tags: string; direction_id: string | null; days_since_previous?: number | null }[];
+      .prepare('SELECT * FROM chapters WHERE story_id = ? ORDER BY number')
+      .all(storyId) as {
+      number: number;
+      title: string;
+      body: string;
+      beat_tags: string;
+      direction_id: string | null;
+      story_time: string;
+      days_since_previous?: number | null;
+      story_date?: string | null;
+      life_areas?: string;
+    }[];
     const lengths = chapters.map((c) => [...c.body].length);
-    const jobs = db.prepare('SELECT status, attempts, context_stats FROM jobs WHERE story_id = ?').all(storyId) as {
+    const jobs = db.prepare('SELECT status, attempts, context_stats, warnings FROM jobs WHERE story_id = ?').all(storyId) as {
       status: string;
       attempts: number;
       context_stats: string | null;
+      warnings: string | null;
     }[];
     const calls = db
-      .prepare('SELECT purpose, outcome, latency_ms, input_tokens, output_tokens, reasoning_tokens, cost_usd, cost_source FROM model_calls WHERE story_id = ?')
+      .prepare('SELECT purpose, outcome, error_message, latency_ms, input_tokens, output_tokens, reasoning_tokens, cost_usd, cost_source FROM model_calls WHERE story_id = ?')
       .all(storyId) as {
       purpose: string;
       outcome: string;
+      error_message: string | null;
       latency_ms: number;
       input_tokens: number | null;
       output_tokens: number | null;
@@ -114,6 +152,7 @@ export function storyMetrics(dbPath: string, storyId: string): StoryMetrics {
       calls: {
         chapter: count(calls.filter((c) => c.purpose === 'chapter'), (c) => c.outcome),
         arc: count(calls.filter((c) => c.purpose === 'arc_summary'), (c) => c.outcome),
+        consistency: count(calls.filter((c) => c.purpose === 'consistency'), (c) => c.outcome),
       },
       latencyMs: { p50: percentile(chapterLatencies, 50), p95: percentile(chapterLatencies, 95), max: chapterLatencies.length ? Math.max(...chapterLatencies) : null },
       tokens: { input: sum(calls.map((c) => c.input_tokens)), output: sum(calls.map((c) => c.output_tokens)), reasoning: sum(calls.map((c) => c.reasoning_tokens)) },
@@ -149,6 +188,44 @@ export function storyMetrics(dbPath: string, storyId: string): StoryMetrics {
           arcsSayingUnresolved: arcTexts.filter((t) => /仍未|尚未|未确认|未被证实|均未/.test(t)).length,
           distinctLocations: locations.size,
           storyDays: chapters.every((c) => typeof c.days_since_previous === 'number') ? chapters.reduce((a, c) => a + (c.days_since_previous ?? 0), 0) : null,
+        };
+      })(),
+      calendar: (() => {
+        const dated = chapters.filter((c) => c.story_date);
+        const first = dated[0]?.story_date ?? null;
+        const last = dated.at(-1)?.story_date ?? null;
+        const jumps = dated.slice(1).map((c, i) => daysBetween(dated[i]!.story_date!, c.story_date!));
+        return {
+          firstDate: first,
+          lastDate: last,
+          spanDays: first && last ? daysBetween(first, last) + 1 : null,
+          jumpsOver7Days: jumps.filter((d) => d >= 7).length,
+          maxJumpDays: jumps.length ? Math.max(...jumps) : 0,
+          weekdayMismatches: dated.filter((c) => {
+            const named = weekdayMentioned(c.story_time);
+            return named !== null && named !== weekdayOf(c.story_date!);
+          }).length,
+        };
+      })(),
+      lifeAreas: (() => {
+        const mains = chapters.map((c) => (JSON.parse(c.life_areas ?? '[]') as string[])[0]).filter((a): a is string => Boolean(a));
+        const main = count(mains, (a) => a);
+        const top = mains.length ? Math.max(...Object.values(main)) : 0;
+        let maxWindow = 0;
+        for (let i = 0; i + 10 <= mains.length; i++) {
+          const w = count(mains.slice(i, i + 10), (a) => a);
+          maxWindow = Math.max(maxWindow, ...Object.values(w));
+        }
+        return { main, topShare: mains.length ? Number((top / mains.length).toFixed(2)) : 0, maxWindowShare: maxWindow / 10 };
+      })(),
+      consistency: (() => {
+        const rejected = calls.filter((c) => c.purpose === 'chapter' && c.error_message?.startsWith('一致性检查发现'));
+        const warnings = jobs.flatMap((j) => (j.warnings ? (JSON.parse(j.warnings) as string[]) : []));
+        return {
+          rewrites: rejected.filter((c) => c.outcome === 'invalid').length,
+          hardIssuesFound: rejected.reduce((n, c) => n + (c.error_message!.match(/^- 「/gm)?.length ?? 0), 0),
+          softWarnings: warnings.filter((w) => w.startsWith('一致性检查（疑似）')).length,
+          savedWithHardIssues: warnings.filter((w) => w.startsWith('一致性检查：')).length,
         };
       })(),
     };
