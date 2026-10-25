@@ -176,4 +176,17 @@
 
 ## 9. 测试运行记录
 
-（交付前在最终代码上填写）
+**最终代码**：`main` 分支提交 `1271e62`（2026-10-25），macOS，Node 24.22.0。
+
+| 检查 | 命令 | 结果 | 用时 |
+|---|---|---|---|
+| 类型检查 | `npm run typecheck` | 通过（shared / server / web / e2e / eval+scripts 五个工程） | 包含在下一行 |
+| 全部自动化测试 | `npm run test:all` | Vitest 28 个文件、**207 个测试**全部通过；Playwright **12 个测试**全部通过 | 47 秒 |
+| 分层数量 | — | L1a 后端单元 86 · L1b 后端功能 69 · L3 后端 E2E 4 · L4 契约 7 · L1c 前端单元 12 · L1d 前端功能 29 · L2 前端 E2E 3 · L5 全栈 4 · 视觉回归 5 | — |
+| 干净环境复验 | 从 GitHub 重新克隆 → `nvm use` → `npm ci` → `npm run test:all` | 全部通过（`npm ci` 2 秒，因为本机有 npm 缓存；测试 48 秒） | — |
+| 真实模型（干净目录） | 按 README 配置 `.env.local` → `npm run dev` → 阿秀婆设置走向 → 生成一段 | 第一次尝试成功，`chapter-v4`，18 秒，$0.0018；服务日志里没有出现 key | — |
+| 演示数据（干净目录） | `npm run demo` | 6 个角色，林晚 101 段；`git status` 保持干净 | — |
+| 无 key 启动 | `npm start`（不配置 key） | 页面正常，日志提示“未配置 OPENROUTER_API_KEY”，接口返回 `modelConfigured: false` | — |
+| 真实花费 | OpenRouter `/credits` 前后对比 | 项目累计约 **$1.66**（本地记录 $1.65），上限 $5 | — |
+
+**未覆盖**：只在 macOS 上运行过（视觉基线带 `-darwin` 后缀，其他系统需要自己生成基线）；没有在 Windows 上验证启动脚本；没有做性能或压力测试；没有在多个服务进程共用同一个数据库的情况下运行（文档里已说明不支持）。
