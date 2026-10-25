@@ -5,7 +5,9 @@ export const POLL_MS = 1500;
 
 export const useMeta = () => useQuery({ queryKey: ['meta'], queryFn: api.getMeta });
 
-export const useCharacters = () => useQuery({ queryKey: ['characters'], queryFn: api.listCharacters });
+/** Always refetched on mount: reading progress changes while the reader is open. */
+export const useCharacters = () =>
+  useQuery({ queryKey: ['characters'], queryFn: api.listCharacters, refetchOnMount: 'always' });
 
 /** Story detail; polls while a job is queued or running so progress and completion show up. */
 export const useStory = (storyId: string) =>
