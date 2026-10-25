@@ -1,0 +1,17 @@
+{
+  "name": "@cl/server",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "dev:fixture": "tsx watch src/index.ts --provider=fixture",
+    "start": "tsx src/index.ts"
+  },
+  "dependencies": {
+    "@cl/shared": "*",
+    "@fastify/static": "10.1.6",
+    "fastify": "5.12.5",
+    "zod": "4.6.5"
+  }
+}
