@@ -48,6 +48,8 @@ export const CHAPTER_BODY_MAX = 3000;
 export const chapterDraftSchema = z.strictObject({
   title: z.string().trim().min(2).max(24),
   storyTime: z.string().trim().min(1).max(60),
+  /** Days between the end of the previous chapter and the start of this one (0 = same day). */
+  daysSincePrevious: z.number().int().min(0).max(3650),
   location: z.string().trim().min(1).max(60),
   body: z.string().trim().min(CHAPTER_BODY_MIN).max(CHAPTER_BODY_MAX),
   summary: z.string().trim().min(30).max(240),

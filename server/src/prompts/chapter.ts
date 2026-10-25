@@ -1,5 +1,5 @@
 /** Bump whenever any prompt text below changes (SPEC §2.6). */
-export const PROMPT_VERSION = 'chapter-v3';
+export const PROMPT_VERSION = 'chapter-v4';
 
 export const CHAPTER_SYSTEM_PROMPT = `你是一位中文生活连载作者，正在为一个角色写连续的人生故事。每次只写一章，读者会一章接一章读下去，所以每章都要让人愿意读下一章。
 
@@ -26,6 +26,7 @@ export const CHAPTER_SYSTEM_PROMPT = `你是一位中文生活连载作者，正
 只输出一个符合 JSON schema 的对象：
 - title：本章标题，2–24 字，不要写“第几章”。
 - storyTime、location：本章的故事内时间和地点。
+- daysSincePrevious：本章开头距离上一章结尾过去了多少天（同一天填 0，第一章填 0）。请如实填写，系统用它判断时间节奏。
 - body：正文，段落之间用一个空行分隔。
 - summary：本章摘要 60–240 字，客观写清发生了什么、前因后果和结果，供以后回忆使用。
 - beatTags：1–4 个桥段标签（每个不超过 12 字），如「深夜加班」「父女争吵」，用来避免以后重复。

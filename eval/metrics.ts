@@ -49,6 +49,8 @@ export interface StoryMetrics {
     oldestOpenThreadAge: number;
     arcsSayingUnresolved: number;
     distinctLocations: number;
+    /** Sum of daysSincePrevious (null when chapters predate prompt v4). */
+    storyDays: number | null;
   };
 }
 
@@ -57,8 +59,8 @@ export function storyMetrics(dbPath: string, storyId: string): StoryMetrics {
   const db = new DatabaseSync(dbPath, { readOnly: true });
   try {
     const chapters = db
-      .prepare('SELECT number, title, body, beat_tags, direction_id FROM chapters WHERE story_id = ? ORDER BY number')
-      .all(storyId) as { number: number; title: string; body: string; beat_tags: string; direction_id: string | null }[];
+      .prepare('SELECT number, title, body, beat_tags, direction_id, days_since_previous FROM chapters WHERE story_id = ? ORDER BY number')
+      .all(storyId) as { number: number; title: string; body: string; beat_tags: string; direction_id: string | null; days_since_previous?: number | null }[];
     const lengths = chapters.map((c) => [...c.body].length);
     const jobs = db.prepare('SELECT status, attempts, context_stats FROM jobs WHERE story_id = ?').all(storyId) as {
       status: string;
@@ -146,6 +148,7 @@ export function storyMetrics(dbPath: string, storyId: string): StoryMetrics {
           oldestOpenThreadAge: openOnes.length ? chapters.length - Math.min(...openOnes.map((m) => m.first_chapter)) : 0,
           arcsSayingUnresolved: arcTexts.filter((t) => /仍未|尚未|未确认|未被证实|均未/.test(t)).length,
           distinctLocations: locations.size,
+          storyDays: chapters.every((c) => typeof c.days_since_previous === 'number') ? chapters.reduce((a, c) => a + (c.days_since_previous ?? 0), 0) : null,
         };
       })(),
     };

@@ -43,6 +43,8 @@ export interface ChapterDigest {
   title: string;
   summary: string;
   beatTags: string[];
+  /** Story days since the previous chapter; null when unknown (written before prompt v4). */
+  daysSincePrevious: number | null;
 }
 
 export interface ContextData {
@@ -99,6 +101,8 @@ const STALE_LIMIT = 2;
 const OPEN_THREAD_CAP = 10;
 const FOCUS_WINDOW = 8;
 const FOCUS_THRESHOLD = 6;
+const TIME_WINDOW = 5;
+const TIME_MIN_DAYS = 3;
 
 function renderProfile(fields: ProfileField[]): string {
   const extra = fields.filter((f) => f.key !== 'name');
@@ -203,7 +207,13 @@ export function assembleContext(
   const dominant = open
     .map((m) => ({ m, hits: m.sourceChapters.filter((c) => c >= n - FOCUS_WINDOW && c < n).length }))
     .sort((a, b) => b.hits - a.hits)[0];
+  const recentDays = data.chapterDigests.slice(-TIME_WINDOW).map((d) => d.daysSincePrevious);
+  const knownDays = recentDays.length === TIME_WINDOW && recentDays.every((d) => d !== null);
+  const daysPassed = knownDays ? recentDays.reduce<number>((a, b) => a + (b ?? 0), 0) : null;
   const pacingLines = [
+    ...(daysPassed !== null && daysPassed < TIME_MIN_DAYS
+      ? [`最近 ${TIME_WINDOW} 章在故事里只过去了约 ${daysPassed} 天。本章请让时间明显往前走（几天到几周），让季节、天气和处境跟着变化。`]
+      : []),
     ...(open.length > OPEN_THREAD_CAP
       ? [`未解决的线索已有 ${open.length} 条：本章不要再开新的线索，优先推进或收束已有的。`]
       : []),

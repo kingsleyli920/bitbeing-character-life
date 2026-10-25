@@ -1,5 +1,5 @@
 /** Current schema version (docs/SPEC.md §4.3). Bump it and append a step to `MIGRATIONS` when changing the schema. */
-export const SCHEMA_VERSION = 2;
+export const SCHEMA_VERSION = 3;
 
 /** Version 1, as shipped in M2–M5. New databases are created from it and then migrated. */
 export const SCHEMA_V1_SQL = `
@@ -180,5 +180,10 @@ ALTER TABLE model_calls_v2 RENAME TO model_calls;
 CREATE INDEX model_calls_by_job ON model_calls(job_id);
 CREATE INDEX model_calls_by_character ON model_calls(character_id);
 `,
+  },
+  {
+    // Story-time progression per chapter (prompt v4 pacing rule); NULL for chapters written before v3.
+    version: 3,
+    sql: `ALTER TABLE chapters ADD COLUMN days_since_previous INTEGER;`,
   },
 ];

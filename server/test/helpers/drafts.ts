@@ -5,6 +5,7 @@ export function makeDraft(over: Partial<ChapterDraft> = {}): ChapterDraft {
   return {
     title: '雨夜的鼓点',
     storyTime: '十月第二个周三，夜',
+    daysSincePrevious: 1,
     location: '成都，春熙路后巷',
     body: `${'雨下得很大，周野把电动车停在檐下。'.repeat(40)}`,
     summary: '周野因超时被扣奖励，又被场地老板限期报出主唱名字，否则专场取消。他找不到人选。',

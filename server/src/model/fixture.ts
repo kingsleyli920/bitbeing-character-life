@@ -37,6 +37,7 @@ export function fixtureDraft(req: ModelRequest): ChapterDraft {
   return {
     title,
     storyTime: `第${n}天`,
+    daysSincePrevious: n === 1 ? 0 : 1,
     location: place,
     body: paragraphs.join('\n\n'),
     summary: `第${n}章：${name}在${place}度过一天，和配角${(n % 4) + 1}号聊了几句，决定明天再试一次。${directionText ? `走向「${directionText}」有所推进。` : ''}`,

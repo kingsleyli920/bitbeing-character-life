@@ -19,7 +19,7 @@ describe('schema migration', () => {
     v1.close();
 
     const db = openDb(file);
-    expect(db.prepare('PRAGMA user_version').get()).toEqual({ user_version: 2 });
+    expect(db.prepare('PRAGMA user_version').get()).toEqual({ user_version: 3 });
     expect(db.prepare('SELECT profile_status, profile_json FROM characters WHERE id = ?').get('c1')).toEqual({ profile_status: 'none', profile_json: null });
     expect(db.prepare('SELECT profile_snapshot FROM stories WHERE id = ?').get('s1')).toEqual({ profile_snapshot: null });
     expect(db.prepare('SELECT job_id, cost_usd, error_message FROM model_calls WHERE id = ?').get('m1')).toEqual({ job_id: 'j1', cost_usd: 0.01, error_message: null });

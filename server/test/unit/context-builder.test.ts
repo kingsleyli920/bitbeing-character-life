@@ -29,7 +29,7 @@ const mem = (over: Partial<ContextMemory> & Pick<ContextMemory, 'key'>): Context
 function digests(n: number, summary = (i: number) => `第${i}章发生了一些普通的事情。`) {
   return Array.from({ length: n }, (_, k) => {
     const i = k + 1;
-    return { number: i, title: `标题${i}`, summary: summary(i), beatTags: [`桥段${i}`] };
+    return { number: i, title: `标题${i}`, summary: summary(i), beatTags: [`桥段${i}`], daysSincePrevious: 3 as number | null };
   });
 }
 
@@ -224,6 +224,16 @@ describe('long-story pacing rules', () => {
     expect(ctx.user).toContain('本章不要再开新的线索');
     const few = build(data({ chapterNumber: 20, chapterDigests: digests(19), memories: many.slice(0, 5) }));
     expect(few.user).not.toContain('本章不要再开新的线索');
+  });
+
+  it('asks to move time forward when the last 5 chapters covered under 3 days', () => {
+    const slow = digests(19).map((d) => ({ ...d, daysSincePrevious: 0 }));
+    const ctx = build(data({ chapterNumber: 20, chapterDigests: slow }));
+    expect(ctx.user).toMatch(/最近 5 章在故事里只过去了约 0 天/);
+    const fast = build(data({ chapterNumber: 20, chapterDigests: digests(19) }));
+    expect(fast.user).not.toContain('在故事里只过去了');
+    const unknown = build(data({ chapterNumber: 20, chapterDigests: digests(19).map((d) => ({ ...d, daysSincePrevious: null })) }));
+    expect(unknown.user).not.toContain('在故事里只过去了');
   });
 
   it('suggests rotating focus when one thread dominated the last 8 segments', () => {

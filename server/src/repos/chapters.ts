@@ -45,8 +45,8 @@ export function insertChapter(
   const { draft } = row;
   db.prepare(
     `INSERT INTO chapters (id, story_id, number, title, story_time, location, body, summary, beat_tags,
-                           direction_id, direction_handling, job_id, created_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                           direction_id, direction_handling, job_id, created_at, days_since_previous)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
   ).run(
     row.id,
     storyId,
@@ -61,6 +61,7 @@ export function insertChapter(
     draft.directionHandling ? JSON.stringify(draft.directionHandling) : null,
     row.jobId,
     row.now,
+    draft.daysSincePrevious,
   );
 }
 
@@ -90,9 +91,15 @@ export function listToc(db: Db, storyId: string): { number: number; title: strin
 /** Title, summary and beat tags of chapters before `beforeNumber`, oldest first. */
 export function listDigests(db: Db, storyId: string, beforeNumber: number): ChapterDigest[] {
   const rows = db
-    .prepare('SELECT number, title, summary, beat_tags FROM chapters WHERE story_id = ? AND number < ? ORDER BY number')
-    .all(storyId, beforeNumber) as unknown as { number: number; title: string; summary: string; beat_tags: string }[];
-  return rows.map((r) => ({ number: r.number, title: r.title, summary: r.summary, beatTags: JSON.parse(r.beat_tags) }));
+    .prepare('SELECT number, title, summary, beat_tags, days_since_previous FROM chapters WHERE story_id = ? AND number < ? ORDER BY number')
+    .all(storyId, beforeNumber) as unknown as { number: number; title: string; summary: string; beat_tags: string; days_since_previous: number | null }[];
+  return rows.map((r) => ({
+    number: r.number,
+    title: r.title,
+    summary: r.summary,
+    beatTags: JSON.parse(r.beat_tags),
+    daysSincePrevious: r.days_since_previous,
+  }));
 }
 
 export function getChapterBody(db: Db, storyId: string, number: number): string | undefined {
