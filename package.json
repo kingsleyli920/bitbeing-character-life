@@ -21,6 +21,7 @@
     "prestart": "node scripts/check-node.mjs && npm run build",
     "start": "npm run start -w @cl/server",
     "typecheck": "tsc --noEmit -p shared && tsc --noEmit -p server && tsc --noEmit -p web && tsc --noEmit -p e2e && tsc --noEmit -p eval",
+    "check:secrets": "node scripts/check-secrets.mjs",
     "test:be:unit": "vitest run --project be-unit",
     "test:be:ft": "vitest run --project be-ft",
     "test:e2e:api": "vitest run --project be-e2e",
@@ -33,7 +34,7 @@
     "test:be": "vitest run --project be-unit --project be-ft --project be-e2e --project contract",
     "test:fe": "vitest run --project fe-unit --project fe-ft && npm run test:e2e:web",
     "test:fast": "vitest run",
-    "test:all": "npm run typecheck && vitest run && playwright test",
+    "test:all": "node scripts/check-secrets.mjs && npm run typecheck && vitest run && playwright test",
     "eval": "tsx eval/run.ts",
     "eval:audit": "tsx eval/audit.ts",
     "docs:pdf": "tsx scripts/build-pdf.ts docs/ARCHITECTURE.md"
