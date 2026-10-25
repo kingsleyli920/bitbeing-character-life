@@ -42,3 +42,34 @@ describe('parseDraft', () => {
     expect(parseDraft(JSON.stringify(draft), ctx)).toMatchObject({ ok: true, draft: { directionHandling: null } });
   });
 });
+
+describe('parseDraft soft limits', () => {
+  it('clips over-long summary, title, beat tags, state and memory text with warnings instead of failing', () => {
+    const draft = makeDraft({
+      title: '标'.repeat(30),
+      summary: '摘'.repeat(300),
+      beatTags: ['一个超过十二个字的桥段标签写得太长了'],
+      state: { ...makeDraft().state, situation: '处'.repeat(260) },
+      memoryOps: [{ op: 'upsert', kind: 'event', key: '大事', content: '容'.repeat(350), importance: 2, status: 'active' }],
+    });
+    const result = parseDraft(JSON.stringify(draft), ctx);
+    if (!result.ok) throw new Error(result.message);
+    expect(result.draft.summary).toHaveLength(240);
+    expect(result.draft.title.length).toBeLessThanOrEqual(24);
+    expect(result.draft.beatTags[0]!.length).toBeLessThanOrEqual(12);
+    expect(result.draft.state.situation).toHaveLength(200);
+    expect(result.draft.memoryOps[0]!.content).toHaveLength(300);
+    expect(result.warnings).toEqual(
+      expect.arrayContaining([expect.stringContaining('summary'), expect.stringContaining('title'), expect.stringContaining('memoryOps.0.content')]),
+    );
+  });
+
+  it('still rejects a body that is too long, because clipping would cut the story', () => {
+    expect(parseDraft(JSON.stringify(makeDraft({ body: '长'.repeat(3001) })), ctx).ok).toBe(false);
+  });
+
+  it('still rejects an over-long memory key, because keys identify entries', () => {
+    const draft = makeDraft({ memoryOps: [{ op: 'upsert', kind: 'person', key: '键'.repeat(41), content: 'x', importance: 1, status: 'active' }] });
+    expect(parseDraft(JSON.stringify(draft), ctx).ok).toBe(false);
+  });
+});

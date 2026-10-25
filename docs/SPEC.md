@@ -115,8 +115,9 @@ directionHandling {applied, how, adjustments} | null
 ```
 
 - `memoryOps.kind`：`person`（key=人名）/ `event` / `promise` / `thread` / `trait`。`upsert` 以 `(story_id, key)` 为键新增或更新内容并追加来源章节；`resolve` 把承诺/线索标记为已解决，`content` 写结果。
-- **硬校验（不通过 → 整个结果作废，按 `MODEL_INVALID_OUTPUT` 重试）**：schema 不符；正文 <400 或 >3000 字；`traitChanges.causeChapters` 不在 `[1, 当前章号]`；有当前走向但 `directionHandling` 为 null；`key` 为空或 >40 字；`finish_reason=length`（按 `MODEL_TRUNCATED`）。
+- **硬校验（不通过 → 整个结果作废，按 `MODEL_INVALID_OUTPUT` 重试）**：（截断软长度之后）schema 不符；正文 <400 或 >3000 字；`traitChanges.causeChapters` 不在 `[1, 当前章号]`；有当前走向但 `directionHandling` 为 null；`key` 为空或 >40 字；`finish_reason=length`（按 `MODEL_TRUNCATED`）。
 - **软问题（丢弃该条操作并记入任务 `warnings`，不作废整章）**：`resolve` 不存在的 key；`upsert` 已有 key 但 kind 不同（保留原 kind）。
+- **软长度（截断并记入 `warnings`，不作废整章）**：标题、时间、地点、摘要、桥段标签、状态字段、记忆内容、性格变化说明、走向说明超过上限时截断；数组超过数量上限时截掉多余项。正文和记忆 key 不截断（截断正文会切坏故事，截断 key 会改变记忆身份）。
 - 正文、状态、记忆、性格变化、走向说明**在同一个事务里**写入；任何一步失败整体回滚。
 
 ### 2.3 上下文组装（`server/src/services/context-builder.ts`）

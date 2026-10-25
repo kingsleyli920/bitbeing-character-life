@@ -1,6 +1,6 @@
 import { type ChapterDraft, chapterDraftSchema } from '@cl/shared';
 
-export type DraftResult = { ok: true; draft: ChapterDraft } | { ok: false; message: string };
+export type DraftResult = { ok: true; draft: ChapterDraft; warnings: string[] } | { ok: false; message: string };
 
 function stripFence(text: string): string {
   const trimmed = text.trim();
@@ -8,7 +8,89 @@ function stripFence(text: string): string {
   return fenced ? fenced[1]! : trimmed;
 }
 
-/** Hard validation of one model response (SPEC §2.2). Any failure discards the whole chapter. */
+type Obj = Record<string, unknown>;
+const isObj = (v: unknown): v is Obj => typeof v === 'object' && v !== null && !Array.isArray(v);
+
+/**
+ * Soft limits (SPEC §2.2): over-long descriptive text is clipped with a warning instead of
+ * discarding the whole chapter. The body and memory keys are never clipped.
+ */
+function clipSoftLimits(raw: unknown, warnings: string[]): unknown {
+  if (!isObj(raw)) return raw;
+  const clip = (obj: Obj, key: string, max: number, path: string) => {
+    const v = obj[key];
+    if (typeof v === 'string' && [...v.trim()].length > max) {
+      obj[key] = [...v.trim()].slice(0, max).join('');
+      warnings.push(`${path} 超过 ${max} 字，已截断`);
+    }
+  };
+  const cap = (obj: Obj, key: string, max: number, path: string) => {
+    const v = obj[key];
+    if (Array.isArray(v) && v.length > max) {
+      obj[key] = v.slice(0, max);
+      warnings.push(`${path} 超过 ${max} 项，已截断`);
+    }
+  };
+  const d = { ...raw };
+  clip(d, 'title', 24, 'title');
+  clip(d, 'storyTime', 60, 'storyTime');
+  clip(d, 'location', 60, 'location');
+  clip(d, 'summary', 240, 'summary');
+  cap(d, 'beatTags', 4, 'beatTags');
+  if (Array.isArray(d.beatTags)) {
+    d.beatTags = d.beatTags.map((t, i) => {
+      const holder: Obj = { t };
+      clip(holder, 't', 12, `beatTags.${i}`);
+      return holder.t;
+    });
+  }
+  if (isObj(d.state)) {
+    const s = { ...d.state };
+    clip(s, 'time', 60, 'state.time');
+    clip(s, 'location', 60, 'state.location');
+    clip(s, 'situation', 200, 'state.situation');
+    clip(s, 'mood', 40, 'state.mood');
+    cap(s, 'goals', 4, 'state.goals');
+    if (Array.isArray(s.goals)) {
+      s.goals = s.goals.map((g, i) => {
+        const holder: Obj = { g };
+        clip(holder, 'g', 80, `state.goals.${i}`);
+        return holder.g;
+      });
+    }
+    d.state = s;
+  }
+  cap(d, 'memoryOps', 12, 'memoryOps');
+  if (Array.isArray(d.memoryOps)) {
+    d.memoryOps = d.memoryOps.map((op, i) => {
+      if (!isObj(op)) return op;
+      const o = { ...op };
+      clip(o, 'content', 300, `memoryOps.${i}.content`);
+      return o;
+    });
+  }
+  cap(d, 'traitChanges', 1, 'traitChanges');
+  if (Array.isArray(d.traitChanges)) {
+    d.traitChanges = d.traitChanges.map((t, i) => {
+      if (!isObj(t)) return t;
+      const o = { ...t };
+      clip(o, 'trait', 30, `traitChanges.${i}.trait`);
+      clip(o, 'from', 80, `traitChanges.${i}.from`);
+      clip(o, 'to', 80, `traitChanges.${i}.to`);
+      clip(o, 'explanation', 200, `traitChanges.${i}.explanation`);
+      return o;
+    });
+  }
+  if (isObj(d.directionHandling)) {
+    const h = { ...d.directionHandling };
+    clip(h, 'how', 300, 'directionHandling.how');
+    clip(h, 'adjustments', 300, 'directionHandling.adjustments');
+    d.directionHandling = h;
+  }
+  return d;
+}
+
+/** Validates one model response (SPEC §2.2). Hard failures discard the whole chapter. */
 export function parseDraft(text: string, ctx: { chapterNumber: number; hasDirection: boolean }): DraftResult {
   let raw: unknown;
   try {
@@ -16,7 +98,8 @@ export function parseDraft(text: string, ctx: { chapterNumber: number; hasDirect
   } catch {
     return { ok: false, message: '输出不是合法的 JSON' };
   }
-  const parsed = chapterDraftSchema.safeParse(raw);
+  const warnings: string[] = [];
+  const parsed = chapterDraftSchema.safeParse(clipSoftLimits(raw, warnings));
   if (!parsed.success) {
     const detail = parsed.error.issues
       .slice(0, 5)
@@ -32,5 +115,5 @@ export function parseDraft(text: string, ctx: { chapterNumber: number; hasDirect
   if (ctx.hasDirection && !draft.directionHandling) {
     return { ok: false, message: '有故事走向时 directionHandling 不能为空' };
   }
-  return { ok: true, draft: ctx.hasDirection ? draft : { ...draft, directionHandling: null } };
+  return { ok: true, draft: ctx.hasDirection ? draft : { ...draft, directionHandling: null }, warnings };
 }

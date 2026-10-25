@@ -9,12 +9,16 @@ import { DirectionDialog } from '../components/DirectionDialog';
 import { GenerationStatus } from '../components/GenerationStatus';
 import { MemoryPanel } from '../components/MemoryPanel';
 import { Empty, ErrorBox, Loading } from '../components/QueryState';
+import { StoryMenu } from '../components/StoryMenu';
+import { TocDrawer } from '../components/TocDrawer';
+import { api } from '../api/client';
 import { useChapters } from '../hooks/useChapters';
 import { useGenerate } from '../hooks/useGenerate';
 
 function scrollToChapter(n: number) {
+  const reduce = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
   requestAnimationFrame(() =>
-    document.getElementById(`chapter-${n}`)?.scrollIntoView?.({ behavior: 'smooth', block: 'start' }),
+    document.getElementById(`chapter-${n}`)?.scrollIntoView?.({ behavior: reduce ? 'auto' : 'smooth', block: 'start' }),
   );
 }
 
@@ -22,6 +26,7 @@ function ReaderBody({ story }: { story: StoryDetail }) {
   const queryClient = useQueryClient();
   const [directionOpen, setDirectionOpen] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [tocOpen, setTocOpen] = useState(false);
   const chapters = useChapters(story.id, story.chapterCount);
   const onJob = useCallback(() => void queryClient.invalidateQueries({ queryKey: ['story', story.id] }), [queryClient, story.id]);
   const generate = useGenerate(story.id, onJob);
@@ -43,6 +48,7 @@ function ReaderBody({ story }: { story: StoryDetail }) {
   const jumpTo = useCallback(
     async (n: number) => {
       setSidebarOpen(false);
+      setTocOpen(false);
       await chapters.ensureLoaded(n);
       scrollToChapter(n);
     },
@@ -69,6 +75,17 @@ function ReaderBody({ story }: { story: StoryDetail }) {
           </button>
           <span className="header-spacer" />
           <span className="muted small">共 {story.chapterCount} 章</span>
+          {story.chapterCount > 0 && (
+            <>
+              <button type="button" className="btn btn-ghost" onClick={() => setTocOpen(true)}>
+                目录
+              </button>
+              <a className="btn btn-ghost" href={api.exportUrl(story.id)} download>
+                导出
+              </a>
+            </>
+          )}
+          <StoryMenu story={story} />
         </div>
 
         {story.chapterCount === 0 && !story.activeJob && (
@@ -122,6 +139,7 @@ function ReaderBody({ story }: { story: StoryDetail }) {
         </div>
       </div>
 
+      {tocOpen && <TocDrawer storyId={story.id} total={story.chapterCount} onJump={(n) => void jumpTo(n)} onClose={() => setTocOpen(false)} />}
       {directionOpen && (
         <DirectionDialog
           storyId={story.id}

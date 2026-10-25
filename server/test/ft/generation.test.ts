@@ -402,3 +402,23 @@ describe('reading endpoints', () => {
     expect((await getJob(c, lastJob)).warnings[0]).toContain('不存在的线索');
   });
 });
+
+describe('export', () => {
+  it('downloads every chapter as Markdown with the direction notes', async () => {
+    const c = await setup();
+    await json(c.app, 'PUT', `/api/stories/${c.storyId}/direction`, { text: '接下来温暖一点' });
+    for (let i = 0; i < 2; i++) {
+      await postJob(c);
+      await idle(c);
+    }
+    const res = await c.app.inject(`/api/stories/${c.storyId}/export.md`);
+    expect(res.statusCode).toBe(200);
+    expect(res.headers['content-type']).toBe('text/markdown; charset=utf-8');
+    expect(res.headers['content-disposition']).toContain(encodeURIComponent('周野的故事.md'));
+    expect(res.body).toMatch(/^# 周野的故事/);
+    expect(res.body).toContain('## 第1章 第1章的标题');
+    expect(res.body).toContain('## 第2章 第2章的标题');
+    expect(res.body).toContain('> 本章走向：接下来温暖一点');
+    expect((await c.app.inject('/api/stories/nope/export.md')).statusCode).toBe(404);
+  });
+});

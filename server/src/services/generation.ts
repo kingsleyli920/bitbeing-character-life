@@ -221,7 +221,7 @@ export class GenerationService {
         if (outcome.kind === 'ok') {
           const parsed = parseDraft(outcome.response.text, { chapterNumber: job.target_chapter, hasDirection: Boolean(direction) });
           if (parsed.ok) {
-            const result = this.commit(job, parsed.draft);
+            const result = this.commit(job, parsed.draft, parsed.warnings);
             if (result === 'discarded') setCallOutcome(db, storyId, outcome.callId, 'discarded');
             return;
           }
@@ -341,7 +341,7 @@ export class GenerationService {
    * Saves the chapter and every state change in one transaction (T8), only if this job still owns
    * the next chapter (T3). Throws on a database error, which rolls everything back.
    */
-  private commit(job: JobRow, draft: ChapterDraft): CommitOutcome {
+  private commit(job: JobRow, draft: ChapterDraft, draftWarnings: string[] = []): CommitOutcome {
     const { db, now } = this.deps;
     const storyId = job.story_id;
     return transaction(db, () => {
@@ -360,7 +360,7 @@ export class GenerationService {
       const time = now();
       const chapterId = randomUUID();
       insertChapter(db, storyId, { id: chapterId, number: job.target_chapter, draft, directionId: job.direction_id, jobId: job.id, now: time });
-      const warnings = applyMemoryOps(db, storyId, job.target_chapter, draft.memoryOps, time);
+      const warnings = [...draftWarnings, ...applyMemoryOps(db, storyId, job.target_chapter, draft.memoryOps, time)];
       for (const change of draft.traitChanges) insertTraitChange(db, storyId, job.target_chapter, change);
       db.prepare(
         `UPDATE stories SET state = ?, version = version + 1, chapter_count = chapter_count + 1, updated_at = ?
