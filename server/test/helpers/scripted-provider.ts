@@ -16,13 +16,23 @@ export class ScriptedProvider implements ModelProvider {
   readonly name = 'openrouter' as const;
   configured = true;
   readonly calls: ModelRequest[] = [];
+  readonly arcCalls: ModelRequest[] = [];
   private readonly steps: Step[] = [];
+  private readonly arcSteps: Step[] = [];
+  /** Builds the default draft for a chapter when no step is queued. */
+  draftFor: (req: ModelRequest) => Partial<ChapterDraft> = () => ({});
   private releaseGate: (() => void) | undefined;
   private gateOpened = new Promise<void>((r) => (this.releaseGate = r));
   private callWaiters: { count: number; resolve: () => void }[] = [];
 
   push(...steps: Step[]): this {
     this.steps.push(...steps);
+    return this;
+  }
+
+  /** Steps for arc-summary calls (default: a valid summary). */
+  pushArc(...steps: Step[]): this {
+    this.arcSteps.push(...steps);
     return this;
   }
 
@@ -38,6 +48,11 @@ export class ScriptedProvider implements ModelProvider {
   }
 
   async complete(req: ModelRequest): Promise<ModelResponse> {
+    if (req.purpose === 'arc_summary') {
+      this.arcCalls.push(req);
+      const step = this.arcSteps.shift() ?? { kind: 'text', text: JSON.stringify({ summary: `卷摘要：${'这一卷发生了很多事。'.repeat(5)}` }) };
+      return this.run(step, req);
+    }
     this.calls.push(req);
     for (const w of this.callWaiters.filter((w) => this.calls.length >= w.count)) w.resolve();
     return this.run(this.steps.shift() ?? { kind: 'draft' }, req);
@@ -51,6 +66,7 @@ export class ScriptedProvider implements ModelProvider {
           directionHandling: req.trace.directionText
             ? { applied: true, how: `按「${req.trace.directionText}」安排了冲突`, adjustments: null }
             : null,
+          ...this.draftFor(req),
           ...step.draft,
         });
         return this.reply(JSON.stringify(draft), step.costUsd ?? 0.001);

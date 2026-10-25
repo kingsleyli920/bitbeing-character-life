@@ -1,17 +1,25 @@
 import { randomUUID } from 'node:crypto';
-import { chapterDraftWireSchema, type ChapterDraft, type JobErrorCode, JOB_ERROR_MESSAGES } from '@cl/shared';
+import {
+  arcSummarySchema,
+  arcSummaryWireSchema,
+  chapterDraftWireSchema,
+  type ChapterDraft,
+  type JobErrorCode,
+  JOB_ERROR_MESSAGES,
+} from '@cl/shared';
 import type { FastifyBaseLogger } from 'fastify';
 import { isUniqueViolation, transaction } from '../db/open.js';
 import type { AppDeps } from '../deps.js';
 import { HttpError, notFound } from '../http-errors.js';
 import { ModelError, type ModelProvider, type ModelRequest, type ModelResponse, RETRYABLE_CODES } from '../model/provider.js';
-import { CHAPTER_SYSTEM_PROMPT, PROMPT_VERSION } from '../prompts/chapter.js';
+import { ARC_SYSTEM_PROMPT, CHAPTER_SYSTEM_PROMPT, PROMPT_VERSION } from '../prompts/chapter.js';
 import { insertChapter } from '../repos/chapters.js';
 import { getDirection } from '../repos/directions.js';
 import { getActiveJobRow, getJobRow, type JobRow, toJob, totalSpentUsd } from '../repos/jobs.js';
-import { insertTraitChange, listMemories } from '../repos/memories.js';
+import { insertArcSummary, insertTraitChange, listMemories } from '../repos/memories.js';
 import { insertModelCall, setCallOutcome } from '../repos/model-calls.js';
-import { getStory } from '../repos/stories.js';
+import { getStory, type StoryRecord } from '../repos/stories.js';
+import { arcPrompt, missingArc } from './arc-summary.js';
 import { assembleContext, estimateTokens } from './context-builder.js';
 import { loadContextData } from './context-loader.js';
 import { parseDraft } from './draft-validation.js';
@@ -27,6 +35,8 @@ export interface GenerationDeps extends AppDeps {
 const BACKOFF_MS = [2_000, 5_000];
 const MAX_RETRY_AFTER_MS = 20_000;
 const CHAPTER_MAX_TOKENS = 8_000;
+const ARC_MAX_TOKENS = 1_500;
+const ARC_TIMEOUT_MS = 30_000;
 
 type CommitOutcome = 'committed' | 'stale' | 'discarded';
 
@@ -159,6 +169,8 @@ export class GenerationService {
       if (!provider.configured) return this.finish(storyId, jobId, 'failed', 'MODEL_NOT_CONFIGURED');
 
       const direction = job.direction_id ? (getDirection(db, storyId, job.direction_id) ?? null) : null;
+      await this.ensureArcSummary(job, story, deadline);
+      if (this.closing) return this.finish(storyId, jobId, 'interrupted', 'SERVER_RESTART');
       const context = assembleContext(loadContextData(db, story, job.target_chapter, direction), {
         budgetTokens: config.contextBudgetTokens,
         systemTokens: estimateTokens(CHAPTER_SYSTEM_PROMPT),
@@ -232,6 +244,48 @@ export class GenerationService {
       this.deps.logger?.error({ err, jobId }, 'generation job failed unexpectedly');
       this.finish(storyId, jobId, 'failed', 'INTERNAL', `${JOB_ERROR_MESSAGES.INTERNAL}：${(err as Error).message}`);
     }
+  }
+
+  /**
+   * Before chapter 10k+1, summarise the earliest complete block of 10 chapters that has no arc
+   * summary (SPEC §2.4). One attempt only; failure never blocks the chapter (the context loader
+   * falls back to stitched chapter summaries and the next job tries again).
+   */
+  private async ensureArcSummary(job: JobRow, story: StoryRecord, deadline: number): Promise<void> {
+    const { db, config, now } = this.deps;
+    const gap = missingArc(db, story.id, job.target_chapter);
+    if (!gap || totalSpentUsd(db) >= config.budgetUsdCap) return;
+    // Leave the chapter itself at least one full attempt.
+    const timeoutMs = Math.min(ARC_TIMEOUT_MS, config.attemptTimeoutMs, deadline - Date.now() - config.attemptTimeoutMs);
+    if (timeoutMs < 1_000) return;
+    const outcome = await this.attempt(
+      {
+        purpose: 'arc_summary',
+        model: job.model,
+        system: ARC_SYSTEM_PROMPT,
+        user: arcPrompt(db, story.id, story.card.name, gap.from, gap.to),
+        schemaName: 'arc_summary',
+        jsonSchema: arcSummaryWireSchema,
+        maxTokens: ARC_MAX_TOKENS,
+        trace: { storyId: story.id, chapterNumber: job.target_chapter, characterName: story.card.name, directionText: null, knownKeys: [] },
+      },
+      { storyId: story.id, jobId: job.id, attempt: 0, timeoutMs },
+    );
+    if (outcome.kind === 'error') {
+      this.deps.logger?.warn({ jobId: job.id, code: outcome.error.code, arc: gap }, 'arc summary failed; using stitched summaries');
+      return;
+    }
+    let parsed: ReturnType<typeof arcSummarySchema.safeParse>;
+    try {
+      parsed = arcSummarySchema.safeParse(JSON.parse(outcome.response.text));
+    } catch {
+      parsed = arcSummarySchema.safeParse(null);
+    }
+    if (!parsed.success) {
+      setCallOutcome(db, story.id, outcome.callId, 'invalid');
+      return;
+    }
+    insertArcSummary(db, story.id, gap.from, gap.to, parsed.data.summary, now());
   }
 
   /** One model call with its own timeout; always records a model_calls row. */
