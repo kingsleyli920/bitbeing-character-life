@@ -165,12 +165,13 @@ async function main() {
     await click(page, page.getByRole('button', { name: '更多' }));
     await click(page, page.getByRole('menuitem', { name: '目录' }), { holdMs: 1000 });
     const toc = page.getByRole('dialog', { name: /目录/ });
-    await caption(page, '目录里每段都有故事内的日期：从 2024 年 6 月的梅雨季，一直写到 2025 年 4 月', 1600);
-    const list = toc.locator('.toc');
-    for (let i = 0; i < 6; i++) {
-      await list.evaluate((el) => el.parentElement?.scrollBy(0, 500));
-      await pause(page, 350);
+    await caption(page, '目录里每段都有故事内的日期：从 2024 年 6 月的梅雨季，一直写到第二年 3 月', 1600);
+    await hover(page, toc.locator('.toc li').nth(3));
+    for (let i = 0; i < 12; i++) {
+      await page.mouse.wheel(0, 600);
+      await pause(page, 250);
     }
+    await pause(page, 1200);
     await click(page, toc.getByRole('button', { name: /第 1 段/ }), { holdMs: 1400 });
     await caption(page, '第 1 段埋下的人和事，到第 90 段以后还会被提起', 2400);
     await click(page, page.locator('summary', { hasText: /^记忆/ }).first(), { holdMs: 600 });
