@@ -12,12 +12,13 @@ import type { FastifyInstance } from 'fastify';
 import { transaction } from '../db/open.js';
 import type { AppDeps } from '../deps.js';
 import { notFound, parseInput } from '../http-errors.js';
-import { listChapters, listToc } from '../repos/chapters.js';
+import { listAllChapters, listChapters, listToc } from '../repos/chapters.js';
 import { clearDirection, setDirection } from '../repos/directions.js';
 import { getActiveJobRow, getJobRow, toJob } from '../repos/jobs.js';
 import { listArcSummaries, listMemories, listTraitChanges } from '../repos/memories.js';
 import { getStory, type StoryRecord } from '../repos/stories.js';
 import type { GenerationService } from '../services/generation.js';
+import { storyToMarkdown } from '../services/export.js';
 import { buildStoryDetail } from '../services/story-view.js';
 
 type StoryParams = { Params: { id: string } };
@@ -37,6 +38,15 @@ export function storyRoutes(app: FastifyInstance, { db, now }: AppDeps, generati
     const { from, limit } = parseInput(chaptersQuerySchema, req.query);
     const start = from ?? Math.max(1, story.chapterCount - limit + 1);
     return { chapters: listChapters(db, story.id, start, limit), total: story.chapterCount };
+  });
+
+  app.get<StoryParams>('/api/stories/:id/export.md', async (req, reply) => {
+    const story = requireStory(req.params.id);
+    const filename = encodeURIComponent(`${story.card.name}的故事.md`);
+    return reply
+      .header('content-type', 'text/markdown; charset=utf-8')
+      .header('content-disposition', `attachment; filename="story.md"; filename*=UTF-8''${filename}`)
+      .send(storyToMarkdown(story.card, listAllChapters(db, story.id), now()));
   });
 
   app.get<StoryParams>('/api/stories/:id/toc', async (req): Promise<TocResponse> => ({
