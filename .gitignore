@@ -16,3 +16,4 @@ eval/out/*
 .DS_Store
 *.pdf
 .playwright-mcp/
+!demo/demo.db

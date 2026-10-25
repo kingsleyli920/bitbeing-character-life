@@ -8,7 +8,8 @@ npm run demo                 # 用仓库里的演示数据库启动：已有 5 �
 # 浏览器打开 http://127.0.0.1:5210 ，窗口宽度约 1280
 ```
 
-- `npm run demo` 会先把 `demo/demo.db` 复制到 `data/demo.db` 再启动，所以演示时的操作不会改动仓库里的文件。
+- `npm run demo` 会先把 `demo/demo.db` 复制到 `data/demo.db` 再启动，所以演示时的操作不会改动仓库里的文件；`npm run demo -- --reset` 可以恢复成初始数据。
+- 演示库里的故事都是最终版本（v4）评测时真实生成的：5 个角色各 8 段、林晚 101 段、导入角色「顾青」2 段（注入测试）。页面右上角的“已用 $0.42”是这些故事生成时的实际花费。
 - 现场需要生成新段落时，`.env.local` 里要有 `OPENROUTER_API_KEY`。没有网络时，改用 `npm run dev:fixture` 演示流程（页面会显示「Fixture 模式」）。
 - 一段大约需要 15–30 秒，可以利用等待时间讲解。
 
@@ -27,8 +28,8 @@ npm run demo                 # 用仓库里的演示数据库启动：已有 5 �
 
 ## 备用素材
 
-- 走向 A/B 对比：`docs/eval/direction/` 下同一段历史的三个分支（无走向 / 走向 A / 走向 B）。
-- 注入测试：`docs/eval/injection.md`。角色卡和走向里的“忽略指令”文字没有被执行，第 2 章的 `directionHandling` 里写明了原因。
+- 走向 A/B 对比：`docs/eval/direction/` 下同一段历史的三个分支（无走向 / 文档示例走向 ×2），对照表见 EVALUATION §3。
+- 注入测试：`docs/eval/injection.md`，或在演示里切到「顾青」。角色卡和走向里的“忽略指令”文字没有被执行，第 2 段的「本段走向」里写明了原因。
 - 失败演示：在 fixture 模式下，把走向设为 `[fixture:unavailable] 测试`，可以看到失败原因、尝试次数和「重试」按钮。
 
 ## 录屏步骤（如需自己录）

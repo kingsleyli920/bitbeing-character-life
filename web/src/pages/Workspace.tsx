@@ -18,8 +18,8 @@ import { useChapters } from '../hooks/useChapters';
 import { useGenerate } from '../hooks/useGenerate';
 import { forgetCharacter, rememberCharacter } from '../lib/storage';
 
-function scrollToChapter(n: number) {
-  const reduce = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+function scrollToChapter(n: number, instant = false) {
+  const reduce = instant || window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
   requestAnimationFrame(() =>
     document.getElementById(`chapter-${n}`)?.scrollIntoView?.({ behavior: reduce ? 'auto' : 'smooth', block: 'start' }),
   );
@@ -73,6 +73,16 @@ function WorkspaceBody({ story, characterSource }: { story: StoryDetail; charact
   const waitingForProfile = story.chapterCount === 0 && story.profile.status === 'pending';
 
   useEffect(() => rememberCharacter(story.characterId), [story.characterId]);
+
+  // A returning reader continues from the newest segment.
+  const openedAtLatest = useRef(false);
+  useEffect(() => {
+    const last = chapters.chapters.at(-1);
+    if (!openedAtLatest.current && last) {
+      openedAtLatest.current = true;
+      scrollToChapter(last.number, true);
+    }
+  }, [chapters.chapters]);
 
   // After a segment this reader asked for arrives, bring it into view.
   const expecting = useRef<number | null>(null);
