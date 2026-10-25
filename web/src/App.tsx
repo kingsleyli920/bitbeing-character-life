@@ -1,30 +1,50 @@
-import { QueryClient, QueryClientProvider, useQuery } from '@tanstack/react-query';
-import { api } from './api/client';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import type { ReactNode } from 'react';
+import { BrowserRouter, Link, Route, Routes } from 'react-router';
+import { Header } from './components/Header';
+import { Bookshelf } from './pages/Bookshelf';
+import { OpenCharacter } from './pages/OpenCharacter';
+import { Reader } from './pages/Reader';
 import './styles.css';
 
-function Header() {
-  const meta = useQuery({ queryKey: ['meta'], queryFn: api.getMeta });
+export function createQueryClient(): QueryClient {
+  return new QueryClient({
+    defaultOptions: { queries: { retry: 1, refetchOnWindowFocus: false, staleTime: 2_000 } },
+  });
+}
+
+export function AppRoutes() {
   return (
-    <header className="site-header">
-      <a className="brand" href="/">
-        角色人生
-      </a>
-      {meta.data?.provider === 'fixture' && (
-        <span className="badge" title="使用确定性假模型，内容不是 AI 生成">
-          Fixture 模式
-        </span>
-      )}
-    </header>
+    <>
+      <Header />
+      <Routes>
+        <Route path="/" element={<Bookshelf />} />
+        <Route path="/characters/:id" element={<OpenCharacter />} />
+        <Route path="/stories/:id" element={<Reader />} />
+        <Route
+          path="*"
+          element={
+            <div className="page">
+              <p>页面不存在。</p>
+              <Link to="/">回到书架</Link>
+            </div>
+          }
+        />
+      </Routes>
+    </>
   );
 }
 
-export function App({ queryClient = new QueryClient() }: { queryClient?: QueryClient }) {
+export function Providers({ queryClient, children }: { queryClient: QueryClient; children: ReactNode }) {
+  return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>;
+}
+
+export function App({ queryClient = createQueryClient() }: { queryClient?: QueryClient }) {
   return (
-    <QueryClientProvider client={queryClient}>
-      <Header />
-      <main className="page">
-        <p className="muted">书架正在搭建中。</p>
-      </main>
-    </QueryClientProvider>
+    <Providers queryClient={queryClient}>
+      <BrowserRouter>
+        <AppRoutes />
+      </BrowserRouter>
+    </Providers>
   );
 }
