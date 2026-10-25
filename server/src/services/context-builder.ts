@@ -43,6 +43,8 @@ export interface ChapterDigest {
   title: string;
   summary: string;
   beatTags: string[];
+  /** Story days since the previous chapter; null when unknown (written before prompt v4). */
+  daysSincePrevious: number | null;
 }
 
 export interface ContextData {
@@ -94,6 +96,13 @@ const EXCERPT_LIMIT = 3;
 const EXCERPT_RADIUS = 150;
 const DORMANT_AFTER = 10;
 const DORMANT_LIMIT = 2;
+const STALE_AFTER = 12;
+const STALE_LIMIT = 2;
+const OPEN_THREAD_CAP = 10;
+const FOCUS_WINDOW = 8;
+const FOCUS_THRESHOLD = 6;
+const TIME_WINDOW = 5;
+const TIME_MIN_DAYS = 3;
 
 function renderProfile(fields: ProfileField[]): string {
   const extra = fields.filter((f) => f.key !== 'name');
@@ -190,6 +199,30 @@ export function assembleContext(
       return text ? [{ memory: m, chapter, text }] : [];
     })
     .slice(0, EXCERPT_LIMIT);
+  // Long-story pacing (SPEC §2.5): threads left hanging too long, too many open threads, one thread dominating.
+  const stale = open
+    .filter((m) => m.importance >= 2 && n - m.firstChapter >= STALE_AFTER)
+    .sort((a, b) => a.firstChapter - b.firstChapter)
+    .slice(0, STALE_LIMIT);
+  const dominant = open
+    .map((m) => ({ m, hits: m.sourceChapters.filter((c) => c >= n - FOCUS_WINDOW && c < n).length }))
+    .sort((a, b) => b.hits - a.hits)[0];
+  const recentDays = data.chapterDigests.slice(-TIME_WINDOW).map((d) => d.daysSincePrevious);
+  const knownDays = recentDays.length === TIME_WINDOW && recentDays.every((d) => d !== null);
+  const daysPassed = knownDays ? recentDays.reduce<number>((a, b) => a + (b ?? 0), 0) : null;
+  const pacingLines = [
+    ...(daysPassed !== null && daysPassed < TIME_MIN_DAYS
+      ? [`最近 ${TIME_WINDOW} 章在故事里只过去了约 ${daysPassed} 天。本章请让时间明显往前走（几天到几周），让季节、天气和处境跟着变化。`]
+      : []),
+    ...(open.length > OPEN_THREAD_CAP
+      ? [`未解决的线索已有 ${open.length} 条：本章不要再开新的线索，优先推进或收束已有的。`]
+      : []),
+    ...(dominant && dominant.hits >= FOCUS_THRESHOLD
+      ? [
+          `最近 ${FOCUS_WINDOW} 章里有 ${dominant.hits} 章都围绕「${dominant.m.key}」。下一章请让生活的其他部分进来（工作、钱、朋友、家人、身体、季节变化、新认识的人），或者让这条线出现决定性的进展。`,
+        ]
+      : []),
+  ];
   const dormant = open
     .filter((m) => m.lastChapter <= n - 1 - DORMANT_AFTER)
     .sort((a, b) => a.lastChapter - b.lastChapter)
@@ -226,6 +259,14 @@ export function assembleContext(
         sel.threadsCompact,
       );
     }
+    if (stale.length) {
+      add(
+        'stale_threads',
+        '需要收束的线索',
+        `这些线索已经悬了很久：${stale.map((m) => `${m.key}（已悬 ${n - m.firstChapter} 章）`).join('；')}。请在本章或接下来两章内，至少给其中一条一个明确的结果（揭晓、解决、放弃，或转化成新的问题），不要再用“仍未确认”“仍未说出”拖延。`,
+      );
+    }
+    if (pacingLines.length) add('pacing', '节奏提示', pacingLines.join('\n'));
     if (sel.dormant.length) {
       add(
         'dormant',

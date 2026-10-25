@@ -5,6 +5,7 @@ import { z } from 'zod';
 const validDraft = {
   title: '雨夜的鼓点',
   storyTime: '十月第二个周三，夜',
+  daysSincePrevious: 1,
   location: '成都，春熙路后巷',
   body: '雨'.repeat(900),
   summary: '周野因超时被扣奖励，又被场地老板限期报出主唱名字，否则专场取消。他找不到人选，定金还是骗父亲凑的。',
@@ -49,6 +50,8 @@ describe('chapterDraftSchema', () => {
     ['memory key too long', { memoryOps: [{ ...validDraft.memoryOps[0], key: '键'.repeat(41) }] }],
     ['unknown memory kind', { memoryOps: [{ ...validDraft.memoryOps[0], kind: 'place' }] }],
     ['extra field', { mood: 'x' }],
+    ['negative days', { daysSincePrevious: -1 }],
+    ['fractional days', { daysSincePrevious: 1.5 }],
   ])('rejects %s', (_, patch) => {
     expect(chapterDraftSchema.safeParse({ ...validDraft, ...patch }).success).toBe(false);
   });

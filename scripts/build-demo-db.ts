@@ -21,9 +21,12 @@ for (const source of sources) {
   db.exec(`ATTACH DATABASE '${path.resolve(source).replaceAll("'", "''")}' AS src`);
   db.exec('BEGIN');
   for (const table of tables) db.exec(`INSERT OR IGNORE INTO ${table} SELECT * FROM src.${table}`);
-  db.exec(`INSERT OR IGNORE INTO model_calls
-    SELECT id, job_id, story_id, purpose, attempt, model, provider, prompt_version, started_at, latency_ms, outcome,
-           error_code, finish_reason, input_tokens, output_tokens, reasoning_tokens, cost_usd, cost_source, '{}', NULL
+  db.exec(`INSERT OR IGNORE INTO model_calls (id, job_id, story_id, character_id, purpose, attempt, model, provider,
+      prompt_version, started_at, latency_ms, outcome, error_code, error_message, finish_reason, input_tokens,
+      output_tokens, reasoning_tokens, cost_usd, cost_source, request_json, response_text)
+    SELECT id, job_id, story_id, character_id, purpose, attempt, model, provider, prompt_version, started_at, latency_ms,
+           outcome, error_code, error_message, finish_reason, input_tokens, output_tokens, reasoning_tokens, cost_usd,
+           cost_source, '{}', NULL
       FROM src.model_calls`);
   db.exec('COMMIT');
   db.exec('DETACH DATABASE src');

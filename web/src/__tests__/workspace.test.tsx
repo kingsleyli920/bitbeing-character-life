@@ -185,6 +185,22 @@ describe('Story direction', () => {
 });
 
 describe('Navigating long stories', () => {
+  it('opens a long story at the newest segment', async () => {
+    const scrolled: string[] = [];
+    const original = Element.prototype.scrollIntoView;
+    Element.prototype.scrollIntoView = function (this: Element) {
+      scrolled.push(this.id);
+    };
+    try {
+      installStoryBackend({ chapters: Array.from({ length: 13 }, (_, i) => makeChapter(i + 1)) });
+      open();
+      await screen.findByRole('heading', { name: '第13章的标题' });
+      await waitFor(() => expect(scrolled).toEqual(['chapter-13']));
+    } finally {
+      Element.prototype.scrollIntoView = original;
+    }
+  });
+
   it('loads earlier segments on demand', async () => {
     const backend = installStoryBackend({ chapters: Array.from({ length: 13 }, (_, i) => makeChapter(i + 1)) });
     const user = userEvent.setup();

@@ -113,6 +113,7 @@
 ```
 title            2–24 字
 storyTime        故事内时间，如「十月第二个周三，夜」
+daysSincePrevious 距离上一章结尾过去的天数（整数，同一天为 0）
 location         地点
 body             正文
 summary          60–240 字本章摘要（客观、含因果）
@@ -148,6 +149,8 @@ directionHandling {applied, how, adjustments} | null
 | 10 | 更早的相关章节摘要：与状态、走向、未解决线索有人物/关键词重叠的章节 | 预算内 top-k | 丢弃 |
 | 11 | 原文回查：重要度 ≥2 的未解决线索，从其首个来源章节截取含关键词的约 300 字原文 | 预算内，最多 3 段 | 丢弃 |
 | 12 | 「沉睡线索」：超过 10 章未提及的未解决线索，提示「可以考虑在合适时机回收」 | 最多 2 条 | 丢弃 |
+| 13 | 「需要收束的线索」：重要度 ≥2、已悬 ≥12 章的未解决线索（最老的 2 条），要求 1–3 章内给出明确结果 | 有则必带 | 不裁 |
+| 14 | 「节奏提示」：未解决线索 >10 条时不再开新线索；最近 8 章中有 ≥6 章围绕同一线索时提示转向生活的其他部分或给出决定性进展；最近 5 章累计 `daysSincePrevious` < 3 天时要求本章明显推进时间（v4） | 有则必带 | 不裁 |
 
 ### 2.4 卷摘要
 
@@ -157,6 +160,7 @@ directionHandling {applied, how, adjustments} | null
 
 - **遗忘**：未解决承诺/线索每章必带（§2.3 第 5 项）；沉睡线索主动提示回收；人物按「最近出现 + 被线索引用」选取；卷摘要覆盖全程。
 - **重复**：最近 15 章的标题和桥段标签放进 prompt，要求不要重演同类桥段；评测里自动统计桥段标签重复率和章节间 4-gram 重合度（`docs/EVALUATION.md`）。
+- **停滞**（v3，来自 101 章实测）：线索老化（§2.3 第 13 项）、线索数量上限与题材轮换（第 14 项）、系统 prompt 要求“这是生活故事，不是悬疑小说”、每 3–5 章至少一次明显的时间推进。评测统计线索收束率、最老未解决线索的年龄、卷摘要中“仍未确认”的次数。
 - **人设**：基础设定不可改。性格/状态的变化只能通过 `traitChanges` 记录，必须给出起因章节和解释；服务端校验起因章节存在。prompt 要求：变化要有事件铺垫，单章内不出现性格突变。
 - **可读性**（写进系统 prompt）：具体场景 + 人物行动 + 对话 + 本章后果；不写流水账；不在结尾重复总结；不要求每章反转；配角各有口吻；保持角色卡的表达方式与叙述形式。
 
@@ -238,7 +242,7 @@ POST /jobs ─► queued ─► running ─► succeeded
 | 前端 | `react` 19.3.0，`react-router` 8.4.0，`@tanstack/react-query` 5.104.1，`vite` 8.3.4 |
 | 模型 | OpenRouter Chat Completions（`fetch`，无 SDK）；默认 `anthropic/claude-haiku-5.5`，备选 `deepseek/deepseek-v4-pro`；请求带 `response_format: json_schema(strict)` 与 `provider.require_parameters: true` |
 | 测试 | `vitest` 5.0.3，`@testing-library/*`，`msw` 3.0.2，`jsdom` 30.1.2，`@playwright/test` 1.64.0 |
-| 工具 | `typescript` 7.0.2，`tsx` 4.23.15，`concurrently` 10.0.6 |
+| 工具 | `typescript` 7.0.2，`tsx` 4.23.15，`concurrently` 10.0.6，`marked` 18.1.0（仅用于把文档生成 PDF：`npm run docs:pdf`） |
 
 新增依赖须写入此表。引入数据库服务或大型框架需先与负责人确认。
 
@@ -273,7 +277,7 @@ directions(id TEXT PK, story_id TEXT FK, text TEXT, created_at TEXT, cleared_at 
            effective_from_chapter INTEGER)
 chapters(id TEXT PK, story_id TEXT FK, number INTEGER, title TEXT, story_time TEXT, location TEXT,
          body TEXT, summary TEXT, beat_tags TEXT, direction_id TEXT NULL, direction_handling TEXT NULL,
-         job_id TEXT, created_at TEXT, UNIQUE(story_id, number))
+         job_id TEXT, created_at TEXT, days_since_previous INTEGER NULL /* v3 */, UNIQUE(story_id, number))
 memories(id TEXT PK, story_id TEXT FK, kind TEXT, key TEXT, content TEXT, importance INTEGER,
          status TEXT CHECK(status IN ('active','open','resolved')), source_chapters TEXT,
          first_chapter INTEGER, last_chapter INTEGER, updated_at TEXT, UNIQUE(story_id, key))
@@ -295,7 +299,7 @@ model_calls(id TEXT PK, job_id TEXT NULL, story_id TEXT NULL, character_id TEXT 
             cost_source TEXT, request_json TEXT, response_text TEXT NULL)
 ```
 
-时间一律 UTC ISO 字符串。schema 版本记在 `PRAGMA user_version`，迁移在 `server/src/db/schema.ts` 的 `MIGRATIONS`（v1 → v2 有升级测试）。删除角色时级联删除其故事及所有子表数据；预置角色不可删除。
+时间一律 UTC ISO 字符串。schema 版本记在 `PRAGMA user_version`，迁移在 `server/src/db/schema.ts` 的 `MIGRATIONS`（v1 → v2 → v3 有升级测试）。删除角色时级联删除其故事及所有子表数据；预置角色不可删除。
 
 ### 4.4 接口（`/api`，请求与响应 schema 都在 `shared/src/api.ts`，前后端都做运行时校验）
 

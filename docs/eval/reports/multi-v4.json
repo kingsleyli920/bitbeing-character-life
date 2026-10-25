@@ -1,0 +1,351 @@
+{
+  "scenario": "multi",
+  "description": "5 个预置角色各 8 章（第 5 章起加一个走向），看角色差异与多章连续性",
+  "model": "anthropic/claude-haiku-5.5",
+  "finishedAt": "2026-10-25T09:00:49.330Z",
+  "runSeconds": 878,
+  "stoppedEarly": null,
+  "crashes": {},
+  "stories": {
+    "lin-wan": {
+      "storyId": "13c42284-c898-45ce-a3ac-48dbb2d407dd",
+      "chapters": 8,
+      "bodyChars": {
+        "min": 1003,
+        "avg": 1172,
+        "max": 1553
+      },
+      "jobs": {
+        "succeeded": 8
+      },
+      "jobsNeedingRetry": 0,
+      "calls": {
+        "chapter": {
+          "ok": 8
+        },
+        "arc": {}
+      },
+      "latencyMs": {
+        "p50": 23224,
+        "p95": 28690,
+        "max": 28690
+      },
+      "tokens": {
+        "input": 65800,
+        "output": 25664,
+        "reasoning": 5799
+      },
+      "costUsd": {
+        "total": 0.01941,
+        "reported": 0.01941,
+        "estimated": 0,
+        "unknownCalls": 0
+      },
+      "context": {
+        "maxTokens": 7890,
+        "avgTokens": 5826
+      },
+      "repetition": {
+        "beatTagRepeatRate": 0.125,
+        "duplicateTitles": [],
+        "consecutiveSimilarity": {
+          "avg": 0.021,
+          "max": 0.04,
+          "maxAt": 3
+        }
+      },
+      "memory": {
+        "person:active": 6,
+        "promise:open": 1,
+        "event:active": 4,
+        "thread:resolved": 1,
+        "promise:resolved": 1,
+        "thread:open": 2
+      },
+      "traitChanges": 1,
+      "arcSummaries": 0,
+      "directionChapters": 4,
+      "pacing": {
+        "threadsResolved": 2,
+        "threadsOpen": 3,
+        "resolutionRate": 0.4,
+        "oldestOpenThreadAge": 7,
+        "arcsSayingUnresolved": 0,
+        "distinctLocations": 6,
+        "storyDays": 8
+      }
+    },
+    "zhou-ye": {
+      "storyId": "7c982f4d-627e-4e16-82c1-5af4249466d8",
+      "chapters": 8,
+      "bodyChars": {
+        "min": 794,
+        "avg": 1028,
+        "max": 1495
+      },
+      "jobs": {
+        "succeeded": 8
+      },
+      "jobsNeedingRetry": 0,
+      "calls": {
+        "chapter": {
+          "ok": 8
+        },
+        "arc": {}
+      },
+      "latencyMs": {
+        "p50": 23437,
+        "p95": 28802,
+        "max": 28802
+      },
+      "tokens": {
+        "input": 68055,
+        "output": 28228,
+        "reasoning": 9317
+      },
+      "costUsd": {
+        "total": 0.02092,
+        "reported": 0.02092,
+        "estimated": 0,
+        "unknownCalls": 0
+      },
+      "context": {
+        "maxTokens": 7343,
+        "avgTokens": 5967
+      },
+      "repetition": {
+        "beatTagRepeatRate": 0.25,
+        "duplicateTitles": [],
+        "consecutiveSimilarity": {
+          "avg": 0.015,
+          "max": 0.022,
+          "maxAt": 6
+        }
+      },
+      "memory": {
+        "event:active": 5,
+        "promise:open": 2,
+        "person:active": 7,
+        "promise:resolved": 1,
+        "thread:open": 2
+      },
+      "traitChanges": 0,
+      "arcSummaries": 0,
+      "directionChapters": 4,
+      "pacing": {
+        "threadsResolved": 1,
+        "threadsOpen": 4,
+        "resolutionRate": 0.2,
+        "oldestOpenThreadAge": 7,
+        "arcsSayingUnresolved": 0,
+        "distinctLocations": 8,
+        "storyDays": 22
+      }
+    },
+    "song-zhiwei": {
+      "storyId": "217d79f1-5b91-4fb0-b7df-7325e39cdde5",
+      "chapters": 8,
+      "bodyChars": {
+        "min": 936,
+        "avg": 1156,
+        "max": 1418
+      },
+      "jobs": {
+        "succeeded": 8
+      },
+      "jobsNeedingRetry": 0,
+      "calls": {
+        "chapter": {
+          "ok": 8
+        },
+        "arc": {}
+      },
+      "latencyMs": {
+        "p50": 24096,
+        "p95": 27041,
+        "max": 27041
+      },
+      "tokens": {
+        "input": 63062,
+        "output": 29279,
+        "reasoning": 9907
+      },
+      "costUsd": {
+        "total": 0.02095,
+        "reported": 0.02095,
+        "estimated": 0,
+        "unknownCalls": 0
+      },
+      "context": {
+        "maxTokens": 7371,
+        "avgTokens": 5763
+      },
+      "repetition": {
+        "beatTagRepeatRate": 0.125,
+        "duplicateTitles": [],
+        "consecutiveSimilarity": {
+          "avg": 0.021,
+          "max": 0.033,
+          "maxAt": 2
+        }
+      },
+      "memory": {
+        "event:active": 4,
+        "thread:resolved": 1,
+        "person:active": 3,
+        "promise:open": 2,
+        "thread:open": 2,
+        "promise:resolved": 2,
+        "trait:active": 1
+      },
+      "traitChanges": 0,
+      "arcSummaries": 0,
+      "directionChapters": 4,
+      "pacing": {
+        "threadsResolved": 3,
+        "threadsOpen": 4,
+        "resolutionRate": 0.43,
+        "oldestOpenThreadAge": 7,
+        "arcsSayingUnresolved": 0,
+        "distinctLocations": 6,
+        "storyDays": 13
+      }
+    },
+    "chen-yifan": {
+      "storyId": "1f04e1bd-3c80-4059-8dc1-2eacef939ea2",
+      "chapters": 8,
+      "bodyChars": {
+        "min": 864,
+        "avg": 1142,
+        "max": 1414
+      },
+      "jobs": {
+        "succeeded": 8
+      },
+      "jobsNeedingRetry": 0,
+      "calls": {
+        "chapter": {
+          "ok": 8
+        },
+        "arc": {}
+      },
+      "latencyMs": {
+        "p50": 27786,
+        "p95": 35727,
+        "max": 35727
+      },
+      "tokens": {
+        "input": 68895,
+        "output": 32847,
+        "reasoning": 12810
+      },
+      "costUsd": {
+        "total": 0.02331,
+        "reported": 0.02331,
+        "estimated": 0,
+        "unknownCalls": 0
+      },
+      "context": {
+        "maxTokens": 8252,
+        "avgTokens": 6167
+      },
+      "repetition": {
+        "beatTagRepeatRate": 0,
+        "duplicateTitles": [],
+        "consecutiveSimilarity": {
+          "avg": 0.018,
+          "max": 0.029,
+          "maxAt": 7
+        }
+      },
+      "memory": {
+        "person:active": 7,
+        "event:active": 7,
+        "thread:open": 3,
+        "promise:open": 4,
+        "thread:resolved": 2,
+        "promise:resolved": 1
+      },
+      "traitChanges": 0,
+      "arcSummaries": 0,
+      "directionChapters": 4,
+      "pacing": {
+        "threadsResolved": 3,
+        "threadsOpen": 7,
+        "resolutionRate": 0.3,
+        "oldestOpenThreadAge": 7,
+        "arcsSayingUnresolved": 0,
+        "distinctLocations": 8,
+        "storyDays": 15
+      }
+    },
+    "a-xiu": {
+      "storyId": "a8086981-9b30-4592-9acb-1aa75585ba18",
+      "chapters": 8,
+      "bodyChars": {
+        "min": 811,
+        "avg": 1148,
+        "max": 1441
+      },
+      "jobs": {
+        "succeeded": 8
+      },
+      "jobsNeedingRetry": 0,
+      "calls": {
+        "chapter": {
+          "ok": 8
+        },
+        "arc": {}
+      },
+      "latencyMs": {
+        "p50": 17618,
+        "p95": 24467,
+        "max": 24467
+      },
+      "tokens": {
+        "input": 60861,
+        "output": 21406,
+        "reasoning": 2062
+      },
+      "costUsd": {
+        "total": 0.01679,
+        "reported": 0.01679,
+        "estimated": 0,
+        "unknownCalls": 0
+      },
+      "context": {
+        "maxTokens": 6801,
+        "avgTokens": 5204
+      },
+      "repetition": {
+        "beatTagRepeatRate": 0,
+        "duplicateTitles": [],
+        "consecutiveSimilarity": {
+          "avg": 0.013,
+          "max": 0.019,
+          "maxAt": 7
+        }
+      },
+      "memory": {
+        "thread:open": 2,
+        "event:active": 9,
+        "promise:resolved": 1,
+        "person:active": 7
+      },
+      "traitChanges": 0,
+      "arcSummaries": 0,
+      "directionChapters": 4,
+      "pacing": {
+        "threadsResolved": 1,
+        "threadsOpen": 2,
+        "resolutionRate": 0.33,
+        "oldestOpenThreadAge": 7,
+        "arcsSayingUnresolved": 0,
+        "distinctLocations": 6,
+        "storyDays": 10
+      }
+    }
+  },
+  "branches": {},
+  "totalCostUsd": 0.10138
+}

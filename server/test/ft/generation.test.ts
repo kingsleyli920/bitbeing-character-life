@@ -54,7 +54,7 @@ describe('generation happy path', () => {
     const c = await setup();
     const res = await postJob(c);
     expect(res.status).toBe(202);
-    expect(res.body.job).toMatchObject({ targetChapter: 1, promptVersion: 'chapter-v2' });
+    expect(res.body.job).toMatchObject({ targetChapter: 1, promptVersion: 'chapter-v4' });
     expect(['queued', 'running']).toContain(res.body.job.status);
     await idle(c);
 

@@ -48,7 +48,7 @@ export const SCENARIOS: Record<string, Scenario> = {
     maxCostUsd: 0.6,
   },
   direction: {
-    description: '同一段历史（4 章）分出无走向 / 走向 A / 走向 B 三个分支各写 3 章，比较具体变化',
+    description: '同一段历史（4 段）分出无走向 / 走向 A / 走向 B 三个分支各写 3 段（走向用作业文档里的示例），比较具体变化',
     stories: [
       { key: 'chen-yifan', character: 'chen-yifan', chapters: 4 },
       { key: 'a-xiu', character: 'a-xiu', chapters: 4 },
@@ -59,8 +59,8 @@ export const SCENARIOS: Record<string, Scenario> = {
         extraChapters: 3,
         variants: [
           { key: 'control', direction: null },
-          { key: 'setback', direction: '让她遇到一次事业挫折，但不要突然改变她的性格' },
-          { key: 'warm', direction: '接下来温暖一点，让她和家人的关系慢慢变近' },
+          { key: 'tragic', direction: '更悲惨一点' },
+          { key: 'romance', direction: '更多的感情故事' },
         ],
       },
       {
@@ -68,15 +68,15 @@ export const SCENARIOS: Record<string, Scenario> = {
         extraChapters: 3,
         variants: [
           { key: 'control', direction: null },
-          { key: 'reunion', direction: '让之前失联多年的老朋友重新出现' },
-          { key: 'sell', direction: '让儿子带着开发商上岛，逼她做决定' },
+          { key: 'adventure', direction: '故事更有冒险性一点' },
+          { key: 'philosophy', direction: '故事更有哲理一点' },
         ],
       },
     ],
     maxCostUsd: 0.6,
   },
   long: {
-    description: '林晚连续 101 章：中途调整两次走向、清除一次，第 60 章生成中强杀服务再继续',
+    description: '林晚连续 101 段：第 25 段起“与母亲正面冲突”，第 50 段起“更多的感情故事”，第 75 段起清除走向；第 60 段生成中强杀服务再继续',
     stories: [
       {
         key: 'lin-wan',
@@ -84,7 +84,7 @@ export const SCENARIOS: Record<string, Scenario> = {
         chapters: 101,
         directions: [
           { atChapter: 25, text: '让她和母亲之间发生一次正面冲突，但不要突然和解' },
-          { atChapter: 50, text: '接下来温暖一点，让她慢慢与母亲和解' },
+          { atChapter: 50, text: '更多的感情故事' },
           { atChapter: 75, text: null },
         ],
         crashAtChapter: 60,

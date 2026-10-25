@@ -74,3 +74,17 @@ describe('long stories', () => {
     await t.app.close();
   });
 });
+
+describe('arc summary soft limit', () => {
+  it('clips an over-long arc summary instead of discarding it', async () => {
+    const provider = new ScriptedProvider();
+    provider.pushArc({ kind: 'text', text: JSON.stringify({ summary: '卷'.repeat(330) }) });
+    const t = await createTestApp({ provider, sleep: vi.fn(async () => undefined) });
+    const story = (await json<{ id: string }>(t.app, 'POST', '/api/characters/lin-wan/stories', {})).body;
+    await writeChapters(t.app, story.id, 11);
+    const arc = t.db.prepare('SELECT summary FROM arc_summaries WHERE story_id = ?').get(story.id) as { summary: string };
+    expect([...arc.summary]).toHaveLength(300);
+    expect(provider.arcCalls).toHaveLength(1);
+    await t.app.close();
+  });
+});

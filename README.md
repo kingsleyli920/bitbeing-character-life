@@ -23,6 +23,7 @@ npm run dev             # 打开 http://127.0.0.1:5210
 - 没有 key 也能体验界面和流程：`npm run dev:fixture`。此时使用确定性假模型，页面右上角显示「Fixture 模式」，正文是测试文本，不是 AI 生成。
 - 单端口运行构建版：`npm start`（先构建前端，再由后端在 http://127.0.0.1:3210 同时提供页面和接口）。
 - 版本不对时，启动脚本会提示需要 Node 24。
+- npm 11 安装时会提示 `esbuild`、`msw` 的安装脚本未被批准（`install-scripts`），可以忽略：项目不依赖这两个脚本，测试和运行都已在干净目录里验证过。
 
 ### 配置（`.env.local`，只在服务端读取）
 
@@ -99,7 +100,7 @@ web (React + Vite)  ──HTTP──>  server (Fastify)  ──>  SQLite (node:s
   - `memory-apply`：记忆合并；
   - `arc-summary`：卷摘要。
   - 模型接入在 `model/`（OpenRouter + fixture）。
-- `web/`：书架、阅读页、导入和走向对话框；react-query 负责请求与轮询。
+- `web/`：单页工作台（左「角色卡信息」、右「角色生活故事」）、导入对话框、走向弹出框；react-query 负责请求与轮询。
 - 一次生成 = 一次模型调用，返回 JSON：正文、摘要、状态、记忆增删、性格变化、走向说明。服务端校验通过后，在**一个事务**里写入全部内容。
 
 上下文与记忆的设计、可靠性规则详见 [SPEC §2–§3](docs/SPEC.md#2-故事生成与记忆)，设计取舍见 [docs/INTERVIEW.md](docs/INTERVIEW.md)。
