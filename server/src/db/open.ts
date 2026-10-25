@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
-import { SCHEMA_SQL, SCHEMA_VERSION } from './schema.js';
+import { MIGRATIONS, SCHEMA_V1_SQL, SCHEMA_VERSION } from './schema.js';
 
 export type Db = DatabaseSync;
 
@@ -22,8 +22,16 @@ export function openDb(dbPath: string): Db {
   if (current > SCHEMA_VERSION) {
     throw new Error(`数据库版本 ${current} 比代码支持的 ${SCHEMA_VERSION} 新，请升级代码或删除 ${dbPath}`);
   }
-  db.exec(SCHEMA_SQL);
-  db.exec(`PRAGMA user_version = ${SCHEMA_VERSION}`);
+  if (current === 0) {
+    db.exec(SCHEMA_V1_SQL);
+    db.exec('PRAGMA user_version = 1');
+  }
+  for (const step of MIGRATIONS.filter((m) => m.version > Math.max(current, 1))) {
+    transaction(db, () => {
+      db.exec(step.sql);
+      db.exec(`PRAGMA user_version = ${step.version}`);
+    });
+  }
   return db;
 }
 
