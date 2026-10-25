@@ -73,8 +73,9 @@ describe('consistencyReportSchema', () => {
   const issue = { quote: '她第一次听到母亲的语音', conflict: '第 12 章已经写过她听了这条语音', chapter: 12, severity: 'hard' };
 
   it('accepts an empty report and a report with issues', () => {
-    expect(consistencyReportSchema.safeParse({ issues: [] }).success).toBe(true);
-    expect(consistencyReportSchema.safeParse({ issues: [issue, { ...issue, chapter: null, severity: 'soft' }] }).success).toBe(true);
+    expect(consistencyReportSchema.safeParse({ issues: [], mainArea: '钱' }).success).toBe(true);
+    expect(consistencyReportSchema.safeParse({ issues: [issue, { ...issue, chapter: null, severity: 'soft' }], mainArea: '旧事秘密' }).success).toBe(true);
+    expect(consistencyReportSchema.safeParse({ issues: [] }).success).toBe(false);
   });
 
   it.each([
@@ -82,7 +83,7 @@ describe('consistencyReportSchema', () => {
     ['empty quote', { ...issue, quote: '' }],
     ['chapter zero', { ...issue, chapter: 0 }],
   ])('rejects %s', (_, bad) => {
-    expect(consistencyReportSchema.safeParse({ issues: [bad] }).success).toBe(false);
+    expect(consistencyReportSchema.safeParse({ issues: [bad], mainArea: '钱' }).success).toBe(false);
   });
 });
 

@@ -67,6 +67,8 @@ export interface StoryMetrics {
   /** Main life area (first of lifeAreas) per chapter (prompt v5). */
   lifeAreas: {
     main: Record<string, number>;
+    /** Main area as read by the consistency reviewer (prompt v6). */
+    checked: Record<string, number>;
     topShare: number;
     /** Highest share of one main area in any 10 consecutive chapters. */
     maxWindowShare: number;
@@ -74,6 +76,8 @@ export interface StoryMetrics {
   /** Consistency check (SPEC §2.7), from job warnings and rejected chapter calls. */
   consistency: {
     rewrites: number;
+    /** Rewrites because the main life area did not change when asked to (prompt v6). */
+    areaRewrites: number;
     hardIssuesFound: number;
     softWarnings: number;
     savedWithHardIssues: number;
@@ -96,6 +100,7 @@ export function storyMetrics(dbPath: string, storyId: string): StoryMetrics {
       days_since_previous?: number | null;
       story_date?: string | null;
       life_areas?: string;
+      checked_area?: string | null;
     }[];
     const lengths = chapters.map((c) => [...c.body].length);
     const jobs = db.prepare('SELECT status, attempts, context_stats, warnings FROM jobs WHERE story_id = ?').all(storyId) as {
@@ -216,13 +221,15 @@ export function storyMetrics(dbPath: string, storyId: string): StoryMetrics {
           const w = count(mains.slice(i, i + 10), (a) => a);
           maxWindow = Math.max(maxWindow, ...Object.values(w));
         }
-        return { main, topShare: mains.length ? Number((top / mains.length).toFixed(2)) : 0, maxWindowShare: maxWindow / 10 };
+        const checked = count(chapters.map((c) => c.checked_area).filter((a): a is string => Boolean(a)), (a) => a);
+        return { main, checked, topShare: mains.length ? Number((top / mains.length).toFixed(2)) : 0, maxWindowShare: maxWindow / 10 };
       })(),
       consistency: (() => {
         const rejected = calls.filter((c) => c.purpose === 'chapter' && c.error_message?.startsWith('一致性检查发现'));
         const warnings = jobs.flatMap((j) => (j.warnings ? (JSON.parse(j.warnings) as string[]) : []));
         return {
           rewrites: rejected.filter((c) => c.outcome === 'invalid').length,
+          areaRewrites: calls.filter((c) => c.purpose === 'chapter' && c.error_message?.includes('本章的主线仍然是')).length,
           hardIssuesFound: rejected.reduce((n, c) => n + (c.error_message!.match(/^- 「/gm)?.length ?? 0), 0),
           softWarnings: warnings.filter((w) => w.startsWith('一致性检查（疑似）')).length,
           savedWithHardIssues: warnings.filter((w) => w.startsWith('一致性检查：')).length,

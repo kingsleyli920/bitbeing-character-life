@@ -1,13 +1,13 @@
-import { type ChapterDraft, type ConsistencyIssue, consistencyReportSchema } from '@cl/shared';
+import { type ChapterDraft, type ConsistencyIssue, consistencyReportSchema, type LifeArea } from '@cl/shared';
 import type { ContextData } from './context-builder.js';
 
-const SUMMARY_LIMIT = 15;
 const PEOPLE_LIMIT = 30;
 const RESOLVED_LIMIT = 20;
 
 /**
- * The user message for the consistency reviewer (SPEC §2.7): what is already established, the
- * previous chapter in full, and the new draft. Built from the same data as the chapter context.
+ * The user message for the consistency reviewer (SPEC §2.7): every earlier chapter summary (many
+ * contradictions reach back dozens of chapters), people and threads, the previous chapter in full,
+ * and the new draft. Built from the same data as the chapter context.
  */
 export function consistencyPrompt(data: ContextData, draft: ChapterDraft): string {
   const people = data.memories
@@ -24,7 +24,6 @@ export function consistencyPrompt(data: ContextData, draft: ChapterDraft): strin
     '【已知事实】',
     data.state ? `上一章结束时：${data.state.time}，${data.state.location}；${data.state.situation}` : '',
     `前情摘要：\n${data.chapterDigests
-      .slice(-SUMMARY_LIMIT)
       .map((d) => `- 第${d.number}章${d.storyDate ? `（${d.storyDate}）` : ''}《${d.title}》：${d.summary}`)
       .join('\n')}`,
     people.length ? `人物：\n${people.map(line).join('\n')}` : '',
@@ -39,8 +38,14 @@ export function consistencyPrompt(data: ContextData, draft: ChapterDraft): strin
 const normalize = (s: string) => s.replace(/[\s“”‘’"'「」『』]/g, '');
 
 export type ConsistencyResult =
-  | { ok: true; hard: ConsistencyIssue[]; soft: ConsistencyIssue[]; dropped: number }
+  | { ok: true; hard: ConsistencyIssue[]; soft: ConsistencyIssue[]; dropped: number; mainArea: LifeArea }
   | { ok: false; message: string };
+
+/** Keeps issues whose quote really is in the chapter (ignoring spacing and quote marks). */
+export function quotedIssues(issues: ConsistencyIssue[], body: string): ConsistencyIssue[] {
+  const haystack = normalize(body);
+  return issues.filter((i) => haystack.includes(normalize(i.quote)));
+}
 
 /** Validates the reviewer's output and drops issues whose quote is not actually in the chapter. */
 export function parseConsistencyReport(text: string, body: string): ConsistencyResult {
@@ -52,10 +57,10 @@ export function parseConsistencyReport(text: string, body: string): ConsistencyR
   }
   const parsed = consistencyReportSchema.safeParse(raw);
   if (!parsed.success) return { ok: false, message: '一致性检查的输出不符合约定' };
-  const haystack = normalize(body);
-  const real = parsed.data.issues.filter((i) => haystack.includes(normalize(i.quote)));
+  const real = quotedIssues(parsed.data.issues, body);
   return {
     ok: true,
+    mainArea: parsed.data.mainArea,
     hard: real.filter((i) => i.severity === 'hard'),
     soft: real.filter((i) => i.severity === 'soft'),
     dropped: parsed.data.issues.length - real.length,

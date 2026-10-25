@@ -6,6 +6,7 @@ import {
   type ChapterDraft,
   type ConsistencyIssue,
   consistencyReportWireSchema,
+  type LifeArea,
   type JobErrorCode,
   JOB_ERROR_MESSAGES,
 } from '@cl/shared';
@@ -54,10 +55,13 @@ interface Candidate {
   draft: ChapterDraft;
   warnings: string[];
   daysSincePrevious: number;
+  checkedArea: LifeArea | null;
   callId: string;
 }
 
-type CheckOutcome = { kind: 'checked'; hard: ConsistencyIssue[]; soft: ConsistencyIssue[] } | { kind: 'skipped'; warning: string | null };
+type CheckOutcome =
+  | { kind: 'checked'; hard: ConsistencyIssue[]; soft: ConsistencyIssue[]; mainArea: LifeArea }
+  | { kind: 'skipped'; warning: string | null };
 
 /**
  * Runs chapter generation jobs inside the server process (SPEC §3). One active job per story is
@@ -259,24 +263,46 @@ export class GenerationService {
         if (outcome.kind === 'ok') {
           const parsed = parseDraft(outcome.response.text, draftContext);
           if (parsed.ok) {
-            const candidate: Candidate = { draft: parsed.draft, warnings: parsed.warnings, daysSincePrevious: parsed.daysSincePrevious, callId: outcome.callId };
+            const candidate: Candidate = {
+              draft: parsed.draft,
+              warnings: parsed.warnings,
+              daysSincePrevious: parsed.daysSincePrevious,
+              checkedArea: null,
+              callId: outcome.callId,
+            };
             const check = await this.checkConsistency(job, data, parsed.draft, attempt, deadline);
             if (check.kind === 'skipped') {
               if (check.warning) candidate.warnings.push(check.warning);
               return void this.commitCandidate(job, candidate);
             }
+            candidate.checkedArea = check.mainArea;
             candidate.warnings.push(...check.soft.map((i) => `一致性检查（疑似）：「${i.quote}」${i.conflict}`));
+            // The pacing section asked for another part of life, but the reviewer still reads the old one (prompt v6).
+            const stuck = context.rotation && check.mainArea === context.rotation.avoid ? context.rotation : null;
             const canRewrite = attempt < config.maxAttempts && deadline - Date.now() >= config.attemptTimeoutMs / 2 && !this.closing;
-            if (!check.hard.length || !canRewrite) {
+            if ((!check.hard.length && !stuck) || !canRewrite) {
               candidate.warnings.push(...check.hard.map((i) => `一致性检查：「${i.quote}」${i.conflict}（重写次数已用完，保留了这一版）`));
+              if (stuck) candidate.warnings.push(`节奏：本章主线仍是「${stuck.avoid}」（重写次数已用完，保留了这一版）`);
               return void this.commitCandidate(job, candidate);
             }
-            const issues = describeIssues(check.hard);
-            setCallOutcome(db, outcome.callId, 'invalid', `一致性检查发现与前文矛盾：\n${issues}`);
-            this.deps.logger?.warn({ jobId, attempt, issues: check.hard.length }, 'draft contradicts earlier chapters; rewriting');
-            fallback = { ...candidate, warnings: [...candidate.warnings, ...check.hard.map((i) => `一致性检查：「${i.quote}」${i.conflict}（重写没有成功，保留了这一版）`)] };
-            feedback = `上一次写的版本与前文矛盾，没有被采用：\n${issues}\n请重写本章，避免这些矛盾。`;
-            lastError = new ModelError('MODEL_INVALID_OUTPUT', '与前文矛盾');
+            const reasons = [
+              ...(check.hard.length ? [`与前文矛盾：\n${describeIssues(check.hard)}`] : []),
+              ...(stuck
+                ? [`本章的主线仍然是「${stuck.avoid}」。请把主线换成${stuck.suggest.map((a) => `「${a}」`).join('、')}中的一个，「${stuck.avoid}」最多作为背景带过一两句。`]
+                : []),
+            ];
+            setCallOutcome(db, outcome.callId, 'invalid', `${check.hard.length ? '一致性检查发现' : '节奏检查发现'}${reasons.join('\n')}`);
+            this.deps.logger?.warn({ jobId, attempt, issues: check.hard.length, stuck: Boolean(stuck) }, 'draft rejected by review; rewriting');
+            fallback = {
+              ...candidate,
+              warnings: [
+                ...candidate.warnings,
+                ...check.hard.map((i) => `一致性检查：「${i.quote}」${i.conflict}（重写没有成功，保留了这一版）`),
+                ...(stuck ? [`节奏：本章主线仍是「${stuck.avoid}」（重写没有成功，保留了这一版）`] : []),
+              ],
+            };
+            feedback = `上一次写的版本没有被采用：\n${reasons.join('\n')}\n请重写本章。`;
+            lastError = new ModelError('MODEL_INVALID_OUTPUT', check.hard.length ? '与前文矛盾' : '主线没有换');
             retryNow = true;
           } else {
             setCallOutcome(db, outcome.callId, 'invalid', parsed.message);
@@ -379,7 +405,7 @@ export class GenerationService {
       return { kind: 'skipped', warning: `一致性检查未完成：${report.message}` };
     }
     if (report.dropped) this.deps.logger?.info({ jobId: job.id, dropped: report.dropped }, 'consistency issues without a matching quote ignored');
-    return { kind: 'checked', hard: report.hard, soft: report.soft };
+    return { kind: 'checked', hard: report.hard, soft: report.soft, mainArea: report.mainArea };
   }
 
   private attempt(
@@ -400,7 +426,7 @@ export class GenerationService {
   }
 
   private commitCandidate(job: JobRow, candidate: Candidate): void {
-    const result = this.commit(job, candidate.draft, candidate.daysSincePrevious, candidate.warnings);
+    const result = this.commit(job, candidate);
     if (result === 'discarded') setCallOutcome(this.deps.db, candidate.callId, 'discarded');
   }
 
@@ -408,7 +434,7 @@ export class GenerationService {
    * Saves the chapter and every state change in one transaction (T8), only if this job still owns
    * the next chapter (T3). Throws on a database error, which rolls everything back.
    */
-  private commit(job: JobRow, draft: ChapterDraft, daysSincePrevious: number, draftWarnings: string[] = []): CommitOutcome {
+  private commit(job: JobRow, { draft, daysSincePrevious, checkedArea, warnings: draftWarnings }: Candidate): CommitOutcome {
     const { db, now } = this.deps;
     const storyId = job.story_id;
     return transaction(db, () => {
@@ -431,6 +457,7 @@ export class GenerationService {
         number: job.target_chapter,
         draft,
         daysSincePrevious,
+        checkedArea,
         directionId: job.direction_id,
         jobId: job.id,
         now: time,

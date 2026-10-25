@@ -1,4 +1,4 @@
-import type { ChapterDraft, JobErrorCode } from '@cl/shared';
+import { type ChapterDraft, type JobErrorCode, LIFE_AREAS } from '@cl/shared';
 import { ModelError, type ModelProvider, type ModelRequest, type ModelResponse } from '../../src/model/provider.js';
 import { makeDraft } from './drafts.js';
 
@@ -71,7 +71,9 @@ export class ScriptedProvider implements ModelProvider {
     }
     if (req.purpose === 'consistency') {
       this.checkCalls.push(req);
-      return this.run(this.checkSteps.shift() ?? { kind: 'text', text: JSON.stringify({ issues: [] }) }, req);
+      // Default: no issues, and a main area that changes every chapter so pacing rules stay quiet.
+      const mainArea = LIFE_AREAS[req.trace.chapterNumber % LIFE_AREAS.length];
+      return this.run(this.checkSteps.shift() ?? { kind: 'text', text: JSON.stringify({ issues: [], mainArea }) }, req);
     }
     if (req.purpose === 'arc_summary') {
       this.arcCalls.push(req);
@@ -134,5 +136,10 @@ export function scriptedProfile() {
 
 /** A consistency report that flags `quote` (which must appear in the checked chapter body). */
 export function checkReport(quote: string, severity: 'hard' | 'soft' = 'hard'): Step {
-  return { kind: 'text', text: JSON.stringify({ issues: [{ quote, conflict: '第 1 章已经写过相反的事', chapter: 1, severity }] }) };
+  return { kind: 'text', text: JSON.stringify({ issues: [{ quote, conflict: '第 1 章已经写过相反的事', chapter: 1, severity }], mainArea: '工作学业' }) };
+}
+
+/** A clean consistency report whose reviewer reads the chapter's main life area as `mainArea`. */
+export function areaReport(mainArea: string): Step {
+  return { kind: 'text', text: JSON.stringify({ issues: [], mainArea }) };
 }

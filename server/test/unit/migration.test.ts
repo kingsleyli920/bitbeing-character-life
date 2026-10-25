@@ -19,7 +19,7 @@ describe('schema migration', () => {
     v1.close();
 
     const db = openDb(file);
-    expect(db.prepare('PRAGMA user_version').get()).toEqual({ user_version: 4 });
+    expect(db.prepare('PRAGMA user_version').get()).toEqual({ user_version: 5 });
     expect(db.prepare('SELECT profile_status, profile_json FROM characters WHERE id = ?').get('c1')).toEqual({ profile_status: 'none', profile_json: null });
     expect(db.prepare('SELECT profile_snapshot FROM stories WHERE id = ?').get('s1')).toEqual({ profile_snapshot: null });
     expect(db.prepare('SELECT job_id, cost_usd, error_message FROM model_calls WHERE id = ?').get('m1')).toEqual({ job_id: 'j1', cost_usd: 0.01, error_message: null });
@@ -34,7 +34,7 @@ describe('schema migration', () => {
        VALUES ('m3', 'j1', 's1', 'consistency', 1, 'm', 'v', 't', 'ok', 'unknown', '{}')`,
     ).run();
     const chapterColumns = (db.prepare('PRAGMA table_info(chapters)').all() as { name: string; dflt_value: string | null }[]).map((c) => [c.name, c.dflt_value]);
-    expect(chapterColumns).toEqual(expect.arrayContaining([['story_date', null], ['life_areas', "'[]'"]]));
+    expect(chapterColumns).toEqual(expect.arrayContaining([['story_date', null], ['life_areas', "'[]'"], ['checked_area', null]]));
     expect(db.prepare('SELECT COUNT(*) AS n FROM model_calls WHERE character_id IS NULL').get()).toEqual({ n: 2 });
     db.close();
     // Opening again is a no-op.

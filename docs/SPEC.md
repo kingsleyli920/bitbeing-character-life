@@ -152,7 +152,7 @@ directionHandling {applied, how, adjustments} | null
 | 11 | 原文回查：重要度 ≥2 的未解决线索，从其首个来源章节截取含关键词的约 300 字原文 | 预算内，最多 3 段 | 丢弃 |
 | 12 | 「沉睡线索」：超过 10 章未提及的未解决线索，提示「可以考虑在合适时机回收」 | 最多 2 条 | 丢弃 |
 | 13 | 「需要收束的线索」：重要度 ≥2（承诺不论重要度，v5）、已悬 ≥12 章的未解决线索（最老的 2 条），要求 1–3 章内给出明确结果 | 有则必带 | 不裁 |
-| 14 | 「节奏提示」：未解决线索 >10 条时不再开新线索；最近 8 章中有 ≥6 章围绕同一线索时提示转向生活的其他部分或给出决定性进展；最近 5 章累计不到 7 天时要求从 1–4 周后开始（v5，v4 为 <3 天“明显推进”）；新一卷的第一章建议跳过两周到两个月（最近 5 章已有 ≥14 天的跳跃时不提）；最近 10 章里同一个生活面做了 ≥5 次主线时，点名最久没写到的 3 个生活面，请本章换主线（有走向时不提，读者的走向优先） | 有则必带 | 不裁 |
+| 14 | 「节奏提示」：未解决线索 >10 条时不再开新线索；最近 8 章中有 ≥6 章围绕同一线索时提示转向生活的其他部分或给出决定性进展；最近 5 章累计不到 7 天时要求从 1–4 周后开始（v5，v4 为 <3 天“明显推进”）；新一卷的第一章建议跳过两周到两个月（最近 5 章已有 ≥14 天的跳跃时不提）；最近 10 章里同一个生活面做了 ≥5 次主线时，点名最久没写到的 3 个生活面，请本章换主线（有走向时不提，读者的走向优先）。v6 起“主线”以一致性检查给出的 `mainArea` 为准（模型给自己标的生活面偏乐观：v5 长测里自标“旧事秘密”27%，独立分类 65%）；提示了换主线、检查仍读出原来的生活面时，按 §2.7 重写 | 有则必带 | 不裁 |
 | 15 | 「故事日历」（v5）：第 1 章请模型按角色卡选开始日期；之后给出上一章的日期、星期、故事第几天，以及当天 / 1、2、3、5、7、10、14、21、30、45、60 天后的日期和星期对照 | 必带 | 不裁 |
 
 ### 2.4 卷摘要
@@ -172,16 +172,17 @@ directionHandling {applied, how, adjustments} | null
 
 ### 2.6 Prompt 版本
 
-`PROMPT_VERSION` 常量（当前 `chapter-v5`；一致性检查 `consistency-v2`，补全设定 `profile-v1`）记录在每个任务与模型调用上；修改 prompt 文本必须递增版本，便于评测结果对应。
+`PROMPT_VERSION` 常量（当前 `chapter-v6`；一致性检查 `consistency-v3`，补全设定 `profile-v1`）记录在每个任务与模型调用上；修改 prompt 文本必须递增版本，便于评测结果对应。
 
 ### 2.7 一致性检查（v5，`server/src/services/consistency.ts`）
 
 草稿通过 §2.2 的校验后、提交前，用同一个模型做一次小调用（`purpose=consistency`，最多 30 秒）：
 
-- **输入**：上一章结束时的状态、最近 15 章摘要（带日期）、人物（最多 30 个）、进行中的承诺/线索/重要事件、已有结果的事（最多 20 条）、上一章原文、新章节全文。约 5–9k token。
-- **输出** `{issues: [{quote, conflict, chapter, severity: hard|soft}]}`（≤5 条）。`quote` 必须能在新章节正文里找到（忽略空白和引号），找不到的视为误报直接丢弃。
+- **输入**：上一章结束时的状态、此前全部章节摘要（带日期；v3 起不再只给最近 15 章，因为实测里矛盾常常指向几十章之前）、人物（最多 30 个）、进行中的承诺/线索/重要事件、已有结果的事（最多 20 条）、上一章原文、新章节全文。约 5–9k token。
+- **输出** `{issues: [{quote, conflict, chapter, severity: hard|soft}], mainArea}`（issues ≤5 条；`mainArea` 是检查器读出的本章主线生活面，存入 `chapters.checked_area`）。`quote` 必须能在新章节正文里找到（忽略空白和引号），找不到的视为误报直接丢弃。
 - **hard**：还有重写机会（未到最大尝试次数、剩余时间 ≥ 单次超时的一半）就作废这一版，把矛盾原文作为【上一次输出的问题】立即重写（不退避）；否则保存并把矛盾写进 `warnings`。被拒的完整草稿留作后备：之后的尝试全部失败时，保存它并附警告，而不是让任务失败。
 - **soft**：不重写，记入 `warnings`。
+- **主线没换**（v6）：本章上下文要求换主线（§2.3 第 14 项），而 `mainArea` 仍是要离开的那个生活面，与 hard 一样重写，反馈里点名可选的生活面；重写机会用完就保存并记警告。
 - 判定口径（`consistency-v2`）：剧情揭晓（明确写出“原来……”，推翻人物原来的认识）不算矛盾；东西放在哪里、措辞这类不影响情节的小出入记为 soft。v1 在实测中把一次揭晓判成矛盾，也为小出入触发过重写（EVALUATION §6）。
 - 检查本身失败（超时、错误、输出不合格）、费用到上限、剩余时间不足 5 秒：跳过检查直接保存，`warnings` 里写明“一致性检查未完成”。检查永远不会让一章失败。
 - `CONSISTENCY_CHECK=off` 关闭。费用和 token 记入同一任务的用量。
@@ -296,7 +297,8 @@ directions(id TEXT PK, story_id TEXT FK, text TEXT, created_at TEXT, cleared_at 
 chapters(id TEXT PK, story_id TEXT FK, number INTEGER, title TEXT, story_time TEXT, location TEXT,
          body TEXT, summary TEXT, beat_tags TEXT, direction_id TEXT NULL, direction_handling TEXT NULL,
          job_id TEXT, created_at TEXT, days_since_previous INTEGER NULL /* v3；v5 起由日期推算 */,
-         story_date TEXT NULL /* v4 */, life_areas TEXT DEFAULT '[]' /* v4 */, UNIQUE(story_id, number))
+         story_date TEXT NULL /* v4 */, life_areas TEXT DEFAULT '[]' /* v4 */,
+         checked_area TEXT NULL /* v5：一致性检查读出的主线生活面 */, UNIQUE(story_id, number))
 memories(id TEXT PK, story_id TEXT FK, kind TEXT, key TEXT, content TEXT, importance INTEGER,
          status TEXT CHECK(status IN ('active','open','resolved')), source_chapters TEXT,
          first_chapter INTEGER, last_chapter INTEGER, updated_at TEXT, UNIQUE(story_id, key))

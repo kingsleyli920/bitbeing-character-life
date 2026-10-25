@@ -165,7 +165,7 @@ async function main() {
     await click(page, page.getByRole('button', { name: '更多' }));
     await click(page, page.getByRole('menuitem', { name: '目录' }), { holdMs: 1000 });
     const toc = page.getByRole('dialog', { name: /目录/ });
-    await caption(page, '目录里每段都有故事内的日期：从梅雨季一直写到秋冬', 1600);
+    await caption(page, '目录里每段都有故事内的日期：从 2024 年 6 月的梅雨季，一直写到 2025 年 4 月', 1600);
     const list = toc.locator('.toc');
     for (let i = 0; i < 6; i++) {
       await list.evaluate((el) => el.parentElement?.scrollBy(0, 500));

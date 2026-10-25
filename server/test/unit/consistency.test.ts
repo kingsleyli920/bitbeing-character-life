@@ -28,6 +28,7 @@ const data: ContextData = {
     daysSincePrevious: 1,
     storyDate: `2026-10-0${n}`,
     lifeAreas: ['工作学业'],
+    checkedArea: null,
   })),
   excerpt: () => null,
 };
@@ -42,6 +43,10 @@ describe('consistencyPrompt', () => {
     // Resolved promises are facts too ("already called back").
     expect(prompt).toContain('回电话：答应周末给母亲回电话；第 4 章已经回了');
     expect(prompt).toContain('【上一章原文】');
+    // Every earlier summary, not just the recent ones.
+    const long = consistencyPrompt({ ...data, chapterNumber: 41, chapterDigests: Array.from({ length: 40 }, (_, i) => ({ ...data.chapterDigests[0]!, number: i + 1, summary: `第${i + 1}章的事` })) }, draft);
+    expect(long).toContain('- 第1章（2026-10-01）《标题1》：第1章的事');
+    expect(long).toContain('第40章的事');
     expect(prompt).toMatch(/【新章节】\n第6章《雨夜的鼓点》 2026-10-14 · 十月第二个周三，夜 · 成都，春熙路后巷\n/);
     expect(prompt).toContain('她还是没有点开母亲的语音。');
   });
@@ -52,9 +57,10 @@ describe('parseConsistencyReport', () => {
   const issue = (quote: string, severity: 'hard' | 'soft' = 'hard') => ({ quote, conflict: '第 3 章已经听过这条语音', chapter: 3, severity });
 
   it('keeps issues whose quote is really in the chapter, ignoring spacing and quote marks', () => {
-    const report = { issues: [issue('“她还是没有点开 母亲的语音”'), issue('窗外下着雨', 'soft')] };
+    const report = { issues: [issue('“她还是没有点开 母亲的语音”'), issue('窗外下着雨', 'soft')], mainArea: '家人' };
     expect(parseConsistencyReport(JSON.stringify(report), body)).toEqual({
       ok: true,
+      mainArea: '家人',
       hard: [report.issues[0]],
       soft: [report.issues[1]],
       dropped: 0,
@@ -62,7 +68,7 @@ describe('parseConsistencyReport', () => {
   });
 
   it('drops issues that quote text the chapter does not contain', () => {
-    const result = parseConsistencyReport(JSON.stringify({ issues: [issue('她第一次见到母亲')] }), body);
+    const result = parseConsistencyReport(JSON.stringify({ issues: [issue('她第一次见到母亲')], mainArea: '家人' }), body);
     expect(result).toMatchObject({ ok: true, hard: [], dropped: 1 });
   });
 

@@ -94,7 +94,12 @@ export const consistencyIssueSchema = z.strictObject({
   severity: z.enum(['hard', 'soft']),
 });
 export type ConsistencyIssue = z.infer<typeof consistencyIssueSchema>;
-export const consistencyReportSchema = z.strictObject({ issues: z.array(consistencyIssueSchema).max(5) });
+export const consistencyIssuesSchema = z.array(consistencyIssueSchema).max(5);
+export const consistencyReportSchema = z.strictObject({
+  issues: consistencyIssuesSchema,
+  /** The reviewer's own reading of the chapter's main life area; the writer's label tends to be optimistic (SPEC §2.7). */
+  mainArea: lifeAreaSchema,
+});
 
 const DROPPED_KEYWORDS = new Set([
   '$schema',

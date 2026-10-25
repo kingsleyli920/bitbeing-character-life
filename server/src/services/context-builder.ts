@@ -54,6 +54,8 @@ export interface ChapterDigest {
   storyDate: string | null;
   /** Life areas, main one first; empty for chapters written before prompt v5. */
   lifeAreas: LifeArea[];
+  /** Main life area as read by the consistency reviewer (prompt v6); null when unknown. */
+  checkedArea: LifeArea | null;
 }
 
 export interface ContextData {
@@ -86,6 +88,8 @@ export interface BuiltContext {
   budgetTokens: number;
   includedMemoryKeys: string[];
   referencedChapters: number[];
+  /** Set when the pacing section asks this chapter to change its main life area (SPEC §2.3 #14). */
+  rotation: { avoid: LifeArea; suggest: LifeArea[] } | null;
 }
 
 const STYLE_TEXT: Record<NarrativeStyle, string> = {
@@ -227,15 +231,18 @@ export function assembleContext(
   const slowTime = daysPassed !== null && daysPassed < TIME_MIN_DAYS;
   const newVolume = n > 1 && (n - 1) % VOLUME_SIZE === 0 && !recentDays.some((d) => (d ?? 0) >= BIG_JUMP_DAYS);
   // Life areas: the reader's direction takes priority, so the rotation hint is skipped while one is active.
-  const areaWindow = data.chapterDigests.slice(-AREA_WINDOW).filter((d) => d.lifeAreas.length > 0);
+  // The reviewer's reading wins over the writer's own label, which tends to be optimistic (prompt v6).
+  const mainOf = (d: ChapterDigest) => d.checkedArea ?? d.lifeAreas[0] ?? null;
+  const areaWindow = data.chapterDigests.slice(-AREA_WINDOW).filter((d) => mainOf(d));
   const mainCounts = new Map<LifeArea, number>();
-  for (const d of areaWindow) mainCounts.set(d.lifeAreas[0]!, (mainCounts.get(d.lifeAreas[0]!) ?? 0) + 1);
+  for (const d of areaWindow) mainCounts.set(mainOf(d)!, (mainCounts.get(mainOf(d)!) ?? 0) + 1);
   const [topArea, topCount] = [...mainCounts].sort((a, b) => b[1] - a[1])[0] ?? [null, 0];
   const lastSeen = new Map<LifeArea, number>();
-  for (const d of data.chapterDigests) for (const a of d.lifeAreas) lastSeen.set(a, d.number);
+  for (const d of data.chapterDigests) for (const a of [...d.lifeAreas, ...(d.checkedArea ? [d.checkedArea] : [])]) lastSeen.set(a, d.number);
   const areaSuggestions = LIFE_AREAS.filter((a) => a !== topArea)
     .sort((a, b) => (lastSeen.get(a) ?? 0) - (lastSeen.get(b) ?? 0))
     .slice(0, AREA_SUGGESTIONS);
+  const rotation = topArea && topCount >= AREA_THRESHOLD && !data.direction ? { avoid: topArea, suggest: areaSuggestions } : null;
   const pacingLines = [
     ...(slowTime
       ? [
@@ -245,7 +252,7 @@ export function assembleContext(
     ...(!slowTime && newVolume
       ? ['新的一卷从本章开始：适合做一次较大的时间跳跃（两周到两个月），让季节或生活处境有明显变化。']
       : []),
-    ...(topArea && topCount >= AREA_THRESHOLD && !data.direction
+    ...(rotation
       ? [
           `最近 ${areaWindow.length} 章里有 ${topCount} 章的主线是「${topArea}」。本章请把主线放在${areaSuggestions.map((a) => `「${a}」`).join('、')}中的一个上（这些方面最近很少写到）。「${topArea}」这条线最多作为背景带过一两句。`,
         ]
@@ -433,5 +440,6 @@ export function assembleContext(
     budgetTokens: opts.budgetTokens,
     includedMemoryKeys: [...included],
     referencedChapters: [...referenced].sort((a, b) => a - b),
+    rotation,
   };
 }

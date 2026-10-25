@@ -12,7 +12,7 @@ import { buildApp } from '../../src/app.js';
 import { loadConfig } from '../../src/config.js';
 import { countModelCalls } from '../../src/repos/model-calls.js';
 import { createTestApp, json, type TestApp } from '../helpers/app.js';
-import { checkReport, ScriptedProvider } from '../helpers/scripted-provider.js';
+import { areaReport, checkReport, ScriptedProvider } from '../helpers/scripted-provider.js';
 
 let t: TestApp | undefined;
 afterEach(async () => {
@@ -54,7 +54,7 @@ describe('generation happy path', () => {
     const c = await setup();
     const res = await postJob(c);
     expect(res.status).toBe(202);
-    expect(res.body.job).toMatchObject({ targetChapter: 1, promptVersion: 'chapter-v5' });
+    expect(res.body.job).toMatchObject({ targetChapter: 1, promptVersion: 'chapter-v6' });
     expect(['queued', 'running']).toContain(res.body.job.status);
     await idle(c);
 
@@ -406,8 +406,8 @@ describe('consistency check (SPEC §2.7)', () => {
     expect(c.provider.checkCalls).toHaveLength(1);
     expect(c.provider.checkCalls[0]!.user).toContain('【新章节】');
     expect(c.db.prepare(`SELECT purpose, outcome, prompt_version AS v FROM model_calls WHERE job_id = ? ORDER BY started_at, purpose`).all(res.body.job.id)).toEqual([
-      { purpose: 'chapter', outcome: 'ok', v: 'chapter-v5' },
-      { purpose: 'consistency', outcome: 'ok', v: 'consistency-v2' },
+      { purpose: 'chapter', outcome: 'ok', v: 'chapter-v6' },
+      { purpose: 'consistency', outcome: 'ok', v: 'consistency-v3' },
     ]);
     expect(await getJob(c, res.body.job.id)).toMatchObject({ status: 'succeeded', warnings: [] });
   });
@@ -477,6 +477,28 @@ describe('consistency check (SPEC §2.7)', () => {
     const job = await getJob(c, res.body.job.id);
     expect(job).toMatchObject({ status: 'succeeded', attempts: 1 });
     expect(job.warnings.join('\n')).toContain('一致性检查未完成');
+  });
+
+  it("stores the reviewer's reading of the main life area", async () => {
+    const c = await setup();
+    c.provider.pushCheck(areaReport('朋友'));
+    await postJob(c);
+    await idle(c);
+    expect(c.db.prepare('SELECT checked_area AS a FROM chapters WHERE story_id = ?').get(c.storyId)).toEqual({ a: '朋友' });
+  });
+
+  it('rewrites a chapter whose main thread stayed on the area the pacing hint asked to leave', async () => {
+    const c = await setup();
+    // Five chapters the reviewer reads as 旧事秘密, so chapter 6 is asked to change its main thread.
+    c.provider.pushCheck(...Array.from({ length: 5 }, () => areaReport('旧事秘密')), areaReport('旧事秘密'), areaReport('钱'));
+    for (let i = 0; i < 6; i++) {
+      await postJob(c);
+      await idle(c);
+    }
+    expect(c.provider.calls[5]!.user).toContain('的主线是「旧事秘密」');
+    expect(c.provider.calls[6]!.user).toMatch(/【上一次输出的问题】[\s\S]*本章的主线仍然是「旧事秘密」/);
+    expect(await story(c)).toMatchObject({ chapterCount: 6 });
+    expect(c.db.prepare('SELECT checked_area AS a FROM chapters WHERE story_id = ? AND number = 6').get(c.storyId)).toEqual({ a: '钱' });
   });
 
   it('can be switched off', async () => {

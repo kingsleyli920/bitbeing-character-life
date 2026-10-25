@@ -37,6 +37,7 @@ function digests(n: number, summary = (i: number) => `第${i}章发生了一些�
       daysSincePrevious: 3 as number | null,
       storyDate: null as string | null,
       lifeAreas: [] as LifeArea[],
+      checkedArea: null as LifeArea | null,
     };
   });
 }
@@ -281,9 +282,18 @@ describe('long-story pacing rules', () => {
     const balanced = build(data({ chapterNumber: 20, chapterDigests: dated(19, undefined, (i) => [(['工作学业', '朋友', '家人'] as const)[i % 3]!]) }));
     expect(balanced.user).not.toContain('的主线是');
     expect(build(data({ chapterNumber: 20, chapterDigests: digests(19) })).user).not.toContain('的主线是');
+    expect(ctx.rotation).toEqual({ avoid: '旧事秘密', suggest: ['钱', '感情', '朋友'] });
+    expect(balanced.rotation).toBeNull();
     // The reader's direction wins: no rotation hint while one is active.
     const directed = build(data({ chapterNumber: 20, chapterDigests: dated(19, undefined, areas), direction: { text: '更多的感情故事', chaptersActive: 3 } }));
     expect(directed.user).not.toContain('的主线是');
+  });
+
+  it("counts the reviewer's reading of a chapter, not the writer's own label", () => {
+    // The writer labels every chapter 工作学业, but the reviewer read 7 of the last 10 as 旧事秘密.
+    const digestsWithReview = dated(19).map((d) => ({ ...d, checkedArea: (d.number >= 10 && d.number % 3 !== 0 ? '旧事秘密' : null) as LifeArea | null }));
+    const ctx = build(data({ chapterNumber: 20, chapterDigests: digestsWithReview }));
+    expect(ctx.rotation?.avoid).toBe('旧事秘密');
   });
 
   it('suggests rotating focus when one thread dominated the last 8 segments', () => {

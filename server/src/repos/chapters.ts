@@ -49,6 +49,8 @@ export function insertChapter(
     number: number;
     draft: ChapterDraft;
     daysSincePrevious: number;
+    /** The consistency reviewer's main life area; null when the check did not run. */
+    checkedArea: string | null;
     directionId: string | null;
     jobId: string;
     now: string;
@@ -57,8 +59,8 @@ export function insertChapter(
   const { draft } = row;
   db.prepare(
     `INSERT INTO chapters (id, story_id, number, title, story_time, location, body, summary, beat_tags,
-                           direction_id, direction_handling, job_id, created_at, days_since_previous, story_date, life_areas)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                           direction_id, direction_handling, job_id, created_at, days_since_previous, story_date, life_areas, checked_area)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
   ).run(
     row.id,
     storyId,
@@ -76,6 +78,7 @@ export function insertChapter(
     row.daysSincePrevious,
     draft.storyDate,
     JSON.stringify(draft.lifeAreas),
+    row.checkedArea,
   );
 }
 
@@ -106,7 +109,7 @@ export function listToc(db: Db, storyId: string): { number: number; title: strin
 export function listDigests(db: Db, storyId: string, beforeNumber: number): ChapterDigest[] {
   const rows = db
     .prepare(
-      `SELECT number, title, summary, beat_tags, days_since_previous, story_date, life_areas
+      `SELECT number, title, summary, beat_tags, days_since_previous, story_date, life_areas, checked_area
          FROM chapters WHERE story_id = ? AND number < ? ORDER BY number`,
     )
     .all(storyId, beforeNumber) as unknown as {
@@ -117,6 +120,7 @@ export function listDigests(db: Db, storyId: string, beforeNumber: number): Chap
     days_since_previous: number | null;
     story_date: string | null;
     life_areas: string;
+    checked_area: string | null;
   }[];
   return rows.map((r) => ({
     number: r.number,
@@ -126,6 +130,7 @@ export function listDigests(db: Db, storyId: string, beforeNumber: number): Chap
     daysSincePrevious: r.days_since_previous,
     storyDate: r.story_date,
     lifeAreas: JSON.parse(r.life_areas),
+    checkedArea: r.checked_area as ChapterDigest['checkedArea'],
   }));
 }
 

@@ -68,7 +68,7 @@ export function createFixtureProvider(opts: { delayMs: number }): ModelProvider 
       }
       const text =
         req.purpose === 'consistency'
-          ? JSON.stringify({ issues: [] })
+          ? JSON.stringify({ issues: [], mainArea: fixtureDraft(req).lifeAreas[0] })
           : req.purpose === 'arc_summary'
           ? JSON.stringify({ summary: `【Fixture 卷摘要】截至第 ${req.trace.chapterNumber - 1} 章，${req.trace.characterName}的生活按部就班地推进，几条线索仍在展开。` })
           : JSON.stringify(fixtureDraft(req));

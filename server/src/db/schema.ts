@@ -1,5 +1,5 @@
 /** Current schema version (docs/SPEC.md §4.3). Bump it and append a step to `MIGRATIONS` when changing the schema. */
-export const SCHEMA_VERSION = 4;
+export const SCHEMA_VERSION = 5;
 
 /** Version 1, as shipped in M2–M5. New databases are created from it and then migrated. */
 export const SCHEMA_V1_SQL = `
@@ -225,5 +225,10 @@ ALTER TABLE model_calls_v4 RENAME TO model_calls;
 CREATE INDEX model_calls_by_job ON model_calls(job_id);
 CREATE INDEX model_calls_by_character ON model_calls(character_id);
 `,
+  },
+  {
+    // Prompt v6: the consistency reviewer's own reading of each chapter's main life area drives rotation.
+    version: 5,
+    sql: `ALTER TABLE chapters ADD COLUMN checked_area TEXT;`,
   },
 ];
