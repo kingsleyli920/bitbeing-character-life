@@ -184,6 +184,9 @@ export const chapterSchema = z.object({
   number: z.number().int(),
   title: z.string(),
   storyTime: z.string(),
+  /** Story-calendar date (`YYYY-MM-DD`); null for chapters written before prompt v5. */
+  storyDate: z.string().nullable(),
+  lifeAreas: z.array(z.string()),
   location: z.string(),
   body: z.string(),
   summary: z.string(),
@@ -204,7 +207,7 @@ export const chaptersResponseSchema = z.object({ chapters: z.array(chapterSchema
 export type ChaptersResponse = z.infer<typeof chaptersResponseSchema>;
 
 export const tocResponseSchema = z.object({
-  items: z.array(z.object({ number: z.number().int(), title: z.string(), storyTime: z.string() })),
+  items: z.array(z.object({ number: z.number().int(), title: z.string(), storyTime: z.string(), storyDate: z.string().nullable() })),
 });
 export type TocResponse = z.infer<typeof tocResponseSchema>;
 

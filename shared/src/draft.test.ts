@@ -1,15 +1,23 @@
 import { describe, expect, it } from 'vitest';
-import { chapterDraftSchema, chapterDraftWireSchema, arcSummaryWireSchema, toWireSchema } from './draft.js';
+import {
+  arcSummaryWireSchema,
+  chapterDraftSchema,
+  chapterDraftWireSchema,
+  consistencyReportSchema,
+  consistencyReportWireSchema,
+  toWireSchema,
+} from './draft.js';
 import { z } from 'zod';
 
 const validDraft = {
   title: '雨夜的鼓点',
   storyTime: '十月第二个周三，夜',
-  daysSincePrevious: 1,
+  storyDate: '2026-10-14',
   location: '成都，春熙路后巷',
   body: '雨'.repeat(900),
   summary: '周野因超时被扣奖励，又被场地老板限期报出主唱名字，否则专场取消。他找不到人选，定金还是骗父亲凑的。',
   beatTags: ['送单受挫', '乐队危机'],
+  lifeAreas: ['工作学业', '钱'],
   state: {
     time: '十月第二个周三深夜',
     location: '成都',
@@ -50,10 +58,31 @@ describe('chapterDraftSchema', () => {
     ['memory key too long', { memoryOps: [{ ...validDraft.memoryOps[0], key: '键'.repeat(41) }] }],
     ['unknown memory kind', { memoryOps: [{ ...validDraft.memoryOps[0], kind: 'place' }] }],
     ['extra field', { mood: 'x' }],
-    ['negative days', { daysSincePrevious: -1 }],
-    ['fractional days', { daysSincePrevious: 1.5 }],
+    ['date in another format', { storyDate: '2026/10/14' }],
+    ['impossible date', { storyDate: '2026-02-30' }],
+    ['no life area', { lifeAreas: [] }],
+    ['unknown life area', { lifeAreas: ['悬疑'] }],
+    ['more than three life areas', { lifeAreas: ['工作学业', '钱', '家人', '朋友'] }],
+    ['repeated life area', { lifeAreas: ['钱', '钱'] }],
   ])('rejects %s', (_, patch) => {
     expect(chapterDraftSchema.safeParse({ ...validDraft, ...patch }).success).toBe(false);
+  });
+});
+
+describe('consistencyReportSchema', () => {
+  const issue = { quote: '她第一次听到母亲的语音', conflict: '第 12 章已经写过她听了这条语音', chapter: 12, severity: 'hard' };
+
+  it('accepts an empty report and a report with issues', () => {
+    expect(consistencyReportSchema.safeParse({ issues: [] }).success).toBe(true);
+    expect(consistencyReportSchema.safeParse({ issues: [issue, { ...issue, chapter: null, severity: 'soft' }] }).success).toBe(true);
+  });
+
+  it.each([
+    ['unknown severity', { ...issue, severity: 'minor' }],
+    ['empty quote', { ...issue, quote: '' }],
+    ['chapter zero', { ...issue, chapter: 0 }],
+  ])('rejects %s', (_, bad) => {
+    expect(consistencyReportSchema.safeParse({ issues: [bad] }).success).toBe(false);
   });
 });
 
@@ -61,6 +90,7 @@ describe('wire schema sent to the model', () => {
   it.each([
     ['chapter', chapterDraftWireSchema],
     ['arc summary', arcSummaryWireSchema],
+    ['consistency report', consistencyReportWireSchema],
   ])('%s: every object is closed and lists all properties as required', (_, schema) => {
     let objects = 0;
     walk(schema, (node) => {
