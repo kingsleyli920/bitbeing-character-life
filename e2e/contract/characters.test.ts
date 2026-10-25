@@ -40,3 +40,29 @@ describe('contract: characters and stories', () => {
     await expect(api.getStory('missing')).rejects.toMatchObject({ status: 404, code: 'NOT_FOUND' });
   });
 });
+
+describe('contract: profiles', () => {
+  let server: ServerProcess;
+  let api: ReturnType<typeof createApiClient>;
+  beforeAll(async () => {
+    // A small fixture delay keeps the second request inside the first completion (409).
+    server = await startServer({ env: { FIXTURE_DELAY_MS: '300' } });
+    api = createApiClient(server.baseUrl);
+  });
+  afterAll(async () => {
+    await server?.stop();
+  });
+
+  it('returns preset profiles and completes an imported card', async () => {
+    const preset = await api.getCharacter('zhou-ye');
+    expect(preset.profile.status).toBe('ready');
+    expect(preset.profile.profile!.fields.map((f) => f.key)).toContain('economy');
+    const { character } = await api.importCharacter({ format: 'text', name: '程雨', description: '二十六岁，在大理开了一家只有六个座位的咖啡馆，之前在北京做广告。' });
+    for (let i = 0; i < 100 && (await api.getCharacter(character.id)).profile.status === 'pending'; i++) await new Promise((r) => setTimeout(r, 50));
+    expect((await api.getCharacter(character.id)).profile.status).toBe('ready');
+    await expect(api.completeProfile(character.id)).resolves.toMatchObject({ status: 'pending' });
+    await expect(api.completeProfile(character.id)).rejects.toMatchObject({ status: 409, code: 'PROFILE_IN_PROGRESS' });
+    const story = await api.openStory(character.id);
+    expect(story).toMatchObject({ profileFrozen: false });
+  });
+});
