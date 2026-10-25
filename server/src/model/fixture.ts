@@ -1,4 +1,4 @@
-import type { ChapterDraft } from '@cl/shared';
+import { type ChapterDraft, LIFE_AREAS } from '@cl/shared';
 import { ModelError, type ModelProvider, type ModelRequest, type ModelResponse } from './provider.js';
 
 const TITLES = ['雨夜', '旧物', '来信', '争执', '和解', '远行', '夜班', '重逢', '告别', '清晨', '集市', '台风'];
@@ -37,11 +37,12 @@ export function fixtureDraft(req: ModelRequest): ChapterDraft {
   return {
     title,
     storyTime: `第${n}天`,
-    daysSincePrevious: n === 1 ? 0 : 1,
+    storyDate: new Date(Date.UTC(2026, 5, 1) + (n - 1) * 2 * 86_400_000).toISOString().slice(0, 10),
     location: place,
     body: paragraphs.join('\n\n'),
     summary: `第${n}章：${name}在${place}度过一天，和配角${(n % 4) + 1}号聊了几句，决定明天再试一次。${directionText ? `走向「${directionText}」有所推进。` : ''}`,
     beatTags: [`日常${n % 7}`],
+    lifeAreas: [LIFE_AREAS[n % LIFE_AREAS.length]!],
     state: { time: `第${n}天傍晚`, location: place, situation: '平静地生活', goals: ['明天再试一次'], mood: '平静' },
     memoryOps,
     traitChanges: n % 20 === 0 ? [{ trait: '耐心', from: '急躁', to: '沉得住气', causeChapters: [n - 1, n], explanation: '连续几次受挫后学会了等待' }] : [],
@@ -66,7 +67,9 @@ export function createFixtureProvider(opts: { delayMs: number }): ModelProvider 
         return { text: JSON.stringify({ fields }), finishReason: 'stop', provider: 'fixture', usage: { inputTokens: null, outputTokens: null, reasoningTokens: null, costUsd: null, costSource: 'unknown' } };
       }
       const text =
-        req.purpose === 'arc_summary'
+        req.purpose === 'consistency'
+          ? JSON.stringify({ issues: [] })
+          : req.purpose === 'arc_summary'
           ? JSON.stringify({ summary: `【Fixture 卷摘要】截至第 ${req.trace.chapterNumber - 1} 章，${req.trace.characterName}的生活按部就班地推进，几条线索仍在展开。` })
           : JSON.stringify(fixtureDraft(req));
       return {

@@ -1,4 +1,4 @@
-import { type Chapter, type CharacterCard, NARRATIVE_STYLE_LABELS } from '@cl/shared';
+import { type Chapter, type CharacterCard, formatStoryDate, NARRATIVE_STYLE_LABELS } from '@cl/shared';
 
 /** The whole story as Markdown: title, a short card, then every chapter in order. */
 export function storyToMarkdown(card: CharacterCard, chapters: Chapter[], exportedAt: string): string {
@@ -12,7 +12,7 @@ export function storyToMarkdown(card: CharacterCard, chapters: Chapter[], export
     '',
   ];
   for (const c of chapters) {
-    lines.push(`## 第${c.number}章 ${c.title}`, '', `*${c.storyTime} · ${c.location}*`, '', c.body.trim(), '');
+    lines.push(`## 第${c.number}章 ${c.title}`, '', `*${c.storyDate ? `${formatStoryDate(c.storyDate)} · ` : ''}${c.storyTime} · ${c.location}*`, '', c.body.trim(), '');
     if (c.direction) {
       lines.push(`> 本章走向：${c.direction.text}${c.directionHandling ? `——${c.directionHandling.how}` : ''}`, '');
     }
