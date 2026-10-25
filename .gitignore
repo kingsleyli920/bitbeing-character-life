@@ -1,0 +1,17 @@
+node_modules/
+dist/
+*.tsbuildinfo
+data/
+*.db
+*.db-wal
+*.db-shm
+test-results/
+playwright-report/
+blob-report/
+coverage/
+eval/out/*
+!eval/out/.gitkeep
+.env
+.env.local
+.DS_Store
+*.pdf
