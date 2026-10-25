@@ -407,7 +407,7 @@ describe('consistency check (SPEC §2.7)', () => {
     expect(c.provider.checkCalls[0]!.user).toContain('【新章节】');
     expect(c.db.prepare(`SELECT purpose, outcome, prompt_version AS v FROM model_calls WHERE job_id = ? ORDER BY started_at, purpose`).all(res.body.job.id)).toEqual([
       { purpose: 'chapter', outcome: 'ok', v: 'chapter-v5' },
-      { purpose: 'consistency', outcome: 'ok', v: 'consistency-v1' },
+      { purpose: 'consistency', outcome: 'ok', v: 'consistency-v2' },
     ]);
     expect(await getJob(c, res.body.job.id)).toMatchObject({ status: 'succeeded', warnings: [] });
   });

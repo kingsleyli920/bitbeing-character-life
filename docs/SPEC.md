@@ -172,7 +172,7 @@ directionHandling {applied, how, adjustments} | null
 
 ### 2.6 Prompt 版本
 
-`PROMPT_VERSION` 常量（当前 `chapter-v5`；一致性检查 `consistency-v1`，补全设定 `profile-v1`）记录在每个任务与模型调用上；修改 prompt 文本必须递增版本，便于评测结果对应。
+`PROMPT_VERSION` 常量（当前 `chapter-v5`；一致性检查 `consistency-v2`，补全设定 `profile-v1`）记录在每个任务与模型调用上；修改 prompt 文本必须递增版本，便于评测结果对应。
 
 ### 2.7 一致性检查（v5，`server/src/services/consistency.ts`）
 
@@ -182,6 +182,7 @@ directionHandling {applied, how, adjustments} | null
 - **输出** `{issues: [{quote, conflict, chapter, severity: hard|soft}]}`（≤5 条）。`quote` 必须能在新章节正文里找到（忽略空白和引号），找不到的视为误报直接丢弃。
 - **hard**：还有重写机会（未到最大尝试次数、剩余时间 ≥ 单次超时的一半）就作废这一版，把矛盾原文作为【上一次输出的问题】立即重写（不退避）；否则保存并把矛盾写进 `warnings`。被拒的完整草稿留作后备：之后的尝试全部失败时，保存它并附警告，而不是让任务失败。
 - **soft**：不重写，记入 `warnings`。
+- 判定口径（`consistency-v2`）：剧情揭晓（明确写出“原来……”，推翻人物原来的认识）不算矛盾；东西放在哪里、措辞这类不影响情节的小出入记为 soft。v1 在实测中把一次揭晓判成矛盾，也为小出入触发过重写（EVALUATION §6）。
 - 检查本身失败（超时、错误、输出不合格）、费用到上限、剩余时间不足 5 秒：跳过检查直接保存，`warnings` 里写明“一致性检查未完成”。检查永远不会让一章失败。
 - `CONSISTENCY_CHECK=off` 关闭。费用和 token 记入同一任务的用量。
 
