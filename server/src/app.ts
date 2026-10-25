@@ -15,6 +15,7 @@ import { totalSpentUsd } from './repos/jobs.js';
 import { characterRoutes } from './routes/characters.js';
 import { storyRoutes } from './routes/stories.js';
 import { GenerationService } from './services/generation.js';
+import { ProfileService } from './services/profile.js';
 
 export interface BuildAppOptions {
   config: AppConfig;
@@ -56,9 +57,12 @@ export async function buildApp({
   registerErrorHandler(app);
   const generation = new GenerationService({ ...deps, provider, logger: app.log, ...(sleep && { sleep }) });
   generation.recoverInterrupted();
+  const profiles = new ProfileService({ ...deps, provider, logger: app.log, ...(sleep && { sleep }) });
+  profiles.recoverInterrupted();
   app.decorate('generation', generation);
+  app.decorate('profiles', profiles);
   app.addHook('onClose', async () => {
-    await generation.shutdown();
+    await Promise.all([generation.shutdown(), profiles.shutdown()]);
     if (!givenDb) db.close();
   });
 
@@ -74,12 +78,12 @@ export async function buildApp({
     }),
   );
 
-  characterRoutes(app, deps);
+  characterRoutes(app, deps, profiles);
   storyRoutes(app, deps, generation);
 
   if (config.appEnv === 'test') {
     app.post('/api/__test__/reset', async (_req, reply) => {
-      await generation.idle();
+      await Promise.all([generation.idle(), profiles.idle()]);
       clearAll(db);
       seedPresets(db, now());
       return reply.code(204).send();
@@ -105,5 +109,6 @@ export async function buildApp({
 declare module 'fastify' {
   interface FastifyInstance {
     generation: GenerationService;
+    profiles: ProfileService;
   }
 }

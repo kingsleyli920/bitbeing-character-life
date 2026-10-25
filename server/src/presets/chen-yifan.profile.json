@@ -1,0 +1,84 @@
+{
+  "fields": [
+    {
+      "key": "name",
+      "value": "陈一帆",
+      "source": "original",
+      "reason": ""
+    },
+    {
+      "key": "age",
+      "value": "23 岁。",
+      "source": "original",
+      "reason": ""
+    },
+    {
+      "key": "gender",
+      "value": "女性。",
+      "source": "original",
+      "reason": ""
+    },
+    {
+      "key": "language",
+      "value": "湖南衡阳人，日常说普通话，老家话是湘语，回家会不自觉切回家乡口音。",
+      "source": "inferred",
+      "reason": "角色卡写她是衡阳人，在华南求学工作，普通话为日常语言，回家时自然带出乡音"
+    },
+    {
+      "key": "occupation",
+      "value": "深圳硬件创业公司拾光智能的产品运营，试用期三个月，负责智能台灯众筹等工作。",
+      "source": "original",
+      "reason": ""
+    },
+    {
+      "key": "economy",
+      "value": "月薪不高，试用期工资刚够房租和生活，每月给家里攒钱的计划很吃紧。",
+      "source": "inferred",
+      "reason": "合租城中村、通勤四十分钟，又立志年底前攒一万给家里换冰箱，说明收入有限且花费克制"
+    },
+    {
+      "key": "relationship",
+      "value": "目前没有稳定恋爱关系，工作占满生活，偶尔在深夜想起旧关系但没有时间细想。",
+      "source": "imagined",
+      "reason": "角色卡没有提到感情，她整天忙工作、深夜内耗，按这种状态补一个暂时单身的设定"
+    },
+    {
+      "key": "residence",
+      "value": "与两个女生合租在深圳白石洲城中村的握手楼里，通勤约四十分钟到南山科技园。",
+      "source": "original",
+      "reason": ""
+    },
+    {
+      "key": "appearance",
+      "value": "上班多穿简单的衬衫、牛仔裤或运动鞋，外披一件浅色外套，妆容淡雅，显得利落干练。",
+      "source": "imagined",
+      "reason": "角色卡写她在写字楼上班、表面元气满满，按创业公司的日常着装和年轻女性的气质补充"
+    },
+    {
+      "key": "signature",
+      "value": "说话快、爱用网络用语和表情，发动态时习惯配上亮晶晶的小表情，手机里常备一个记录待办的本子。",
+      "source": "imagined",
+      "reason": "角色卡提到她说话快、爱用网络用语和表情，社交动态语气轻快，再补一个常用的记事习惯作为辨识特征"
+    },
+    {
+      "key": "routine",
+      "value": "早上赶早班地铁去南山上班，白天忙产品和文案，常加班到深夜，末班地铁回到白石洲，睡前刷一会儿手机。",
+      "source": "inferred",
+      "reason": "公司下月上线众筹、全员加班，她又住城中村通勤较远，因此晚归并依赖末班车"
+    },
+    {
+      "key": "hobbies",
+      "value": "喜欢在社交平台记录生活、看短视频和美食类内容，周末偶尔逛逛街或睡懒觉恢复精力。",
+      "source": "imagined",
+      "reason": "角色卡写她每天发打工日常、有八百粉丝，按年轻白领的常见消遣补充业余爱好"
+    },
+    {
+      "key": "speech",
+      "value": "语速快，常夹“绷不住了”“破防了”“家人们谁懂”等网络用语，社交动态里语气轻快，只有内心独白里才说真话。",
+      "source": "original",
+      "reason": ""
+    }
+  ],
+  "model": "anthropic/claude-haiku-5.5",
+  "createdAt": "2026-10-25T07:25:36.056Z"
+}

@@ -1,0 +1,84 @@
+{
+  "fields": [
+    {
+      "key": "name",
+      "value": "周野",
+      "source": "original",
+      "reason": ""
+    },
+    {
+      "key": "age",
+      "value": "27岁",
+      "source": "original",
+      "reason": ""
+    },
+    {
+      "key": "gender",
+      "value": "男",
+      "source": "original",
+      "reason": ""
+    },
+    {
+      "key": "language",
+      "value": "雅安人，母语是四川话，在成都生活多年，说话满口川味口语。",
+      "source": "inferred",
+      "reason": "角色卡写雅安人、说满口四川话口语，且在成都读书工作七年，由此推出母语与生活语言都是四川话。"
+    },
+    {
+      "key": "occupation",
+      "value": "外卖骑手，同时是地下乐队「泥巴」的鼓手。",
+      "source": "original",
+      "reason": ""
+    },
+    {
+      "key": "economy",
+      "value": "收入靠跑外卖维持，每月要还父亲垫付的一万八欠款，手头不宽裕。",
+      "source": "inferred",
+      "reason": "外卖收入是主要来源，角色卡写每月还父亲垫付的一万八元，说明日常开销需要挤出还款部分，经济偏紧。"
+    },
+    {
+      "key": "relationship",
+      "value": "目前没有固定恋人，与父亲关系疏远，与乐队兄弟关系紧密。",
+      "source": "imagined",
+      "reason": "角色卡未写感情状况，但他忙于跑单和乐队、常与兄弟混在一起，又对父亲有怨气，补为单身且情感重心在朋友身上较合理。"
+    },
+    {
+      "key": "residence",
+      "value": "住在成都老城区一间合租的单间里，离玉林路不远，骑车就能到。",
+      "source": "imagined",
+      "reason": "角色卡未写住处，但他是骑手且常去玉林路的酒馆和排练室，住在附近的老城区合租屋符合他的收入和生活半径。"
+    },
+    {
+      "key": "appearance",
+      "value": "身材偏瘦，常穿旧T恤、工装外套和防水骑行裤，脚上是磨损的运动鞋。",
+      "source": "imagined",
+      "reason": "角色卡没有外貌描述，但骑手和鼓手的日常、手头不宽裕的状况，适合朴素耐用的穿衣风格。"
+    },
+    {
+      "key": "signature",
+      "value": "左手腕常戴一根旧的黑色皮编手绳，鼓棒常别在背包侧袋里。",
+      "source": "imagined",
+      "reason": "角色卡没有标志物，补一件与鼓手身份相关、不张扬的随身小物，便于在故事中识别。"
+    },
+    {
+      "key": "routine",
+      "value": "白天跑单，晚高峰接单到九点多，之后去排练室或玉林路酒馆，深夜回住处。",
+      "source": "inferred",
+      "reason": "角色卡写他是外卖骑手、业余鼓手，且乐队在玉林路和排练室活动，由此推出白天工作、晚上排练演出的作息。"
+    },
+    {
+      "key": "hobbies",
+      "value": "喜欢打鼓，也爱抽烟、看老电影，偶尔和朋友在小酒馆喝两杯。",
+      "source": "imagined",
+      "reason": "角色卡明确他打鼓，其余爱好是按他爱用玩笑、讲义气的性格补的日常消遣，显得生活化。"
+    },
+    {
+      "key": "speech",
+      "value": "第一人称讲述，口头禅多，常说“搞锤子”“巴适”“莫得事”，心里话爱绕弯用玩笑带过。",
+      "source": "original",
+      "reason": ""
+    }
+  ],
+  "model": "anthropic/claude-haiku-5.5",
+  "createdAt": "2026-10-25T07:25:36.117Z"
+}

@@ -11,19 +11,21 @@ import type { FastifyBaseLogger } from 'fastify';
 import { isUniqueViolation, transaction } from '../db/open.js';
 import type { AppDeps } from '../deps.js';
 import { HttpError, notFound } from '../http-errors.js';
-import { ModelError, type ModelProvider, type ModelRequest, type ModelResponse, RETRYABLE_CODES } from '../model/provider.js';
+import { ModelError, type ModelProvider, type ModelRequest, RETRYABLE_CODES } from '../model/provider.js';
 import { ARC_SYSTEM_PROMPT, CHAPTER_SYSTEM_PROMPT, PROMPT_VERSION } from '../prompts/chapter.js';
 import { insertChapter } from '../repos/chapters.js';
 import { getDirection } from '../repos/directions.js';
 import { getActiveJobRow, getJobRow, type JobRow, toJob, totalSpentUsd } from '../repos/jobs.js';
 import { insertArcSummary, insertTraitChange, listMemories } from '../repos/memories.js';
-import { insertModelCall, setCallOutcome } from '../repos/model-calls.js';
+import { setCallOutcome } from '../repos/model-calls.js';
+import { snapshotProfile } from '../repos/profiles.js';
 import { getStory, type StoryRecord } from '../repos/stories.js';
 import { arcPrompt, missingArc } from './arc-summary.js';
 import { assembleContext, estimateTokens } from './context-builder.js';
 import { loadContextData } from './context-loader.js';
 import { parseDraft } from './draft-validation.js';
 import { applyMemoryOps } from './memory-apply.js';
+import { type CallOutcome, callModel } from './model-call.js';
 
 export interface GenerationDeps extends AppDeps {
   provider: ModelProvider;
@@ -101,6 +103,8 @@ export class GenerationService {
           job: toJob(db, active),
         });
       }
+      // The completed profile is frozen into the story with its first chapter request.
+      if (story.chapterCount === 0) snapshotProfile(db, storyId, story.characterId);
       return { job: getJobRow(db, storyId, id)!, created: true };
     });
   }
@@ -171,7 +175,7 @@ export class GenerationService {
       const direction = job.direction_id ? (getDirection(db, storyId, job.direction_id) ?? null) : null;
       await this.ensureArcSummary(job, story, deadline);
       if (this.closing) return this.finish(storyId, jobId, 'interrupted', 'SERVER_RESTART');
-      const context = assembleContext(loadContextData(db, story, job.target_chapter, direction), {
+      const context = assembleContext(loadContextData(db, getStory(db, storyId)!, job.target_chapter, direction), {
         budgetTokens: config.contextBudgetTokens,
         systemTokens: estimateTokens(CHAPTER_SYSTEM_PROMPT),
       });
@@ -222,10 +226,10 @@ export class GenerationService {
           const parsed = parseDraft(outcome.response.text, { chapterNumber: job.target_chapter, hasDirection: Boolean(direction) });
           if (parsed.ok) {
             const result = this.commit(job, parsed.draft, parsed.warnings);
-            if (result === 'discarded') setCallOutcome(db, storyId, outcome.callId, 'discarded');
+            if (result === 'discarded') setCallOutcome(db, outcome.callId, 'discarded');
             return;
           }
-          setCallOutcome(db, storyId, outcome.callId, 'invalid');
+          setCallOutcome(db, outcome.callId, 'invalid', parsed.message);
           lastError = new ModelError('MODEL_INVALID_OUTPUT', parsed.message);
           this.deps.logger?.warn({ jobId, attempt, reason: parsed.message }, 'invalid model output');
         } else {
@@ -282,59 +286,21 @@ export class GenerationService {
       parsed = arcSummarySchema.safeParse(null);
     }
     if (!parsed.success) {
-      setCallOutcome(db, story.id, outcome.callId, 'invalid');
+      setCallOutcome(db, outcome.callId, 'invalid', '卷摘要不符合约定');
       return;
     }
     insertArcSummary(db, story.id, gap.from, gap.to, parsed.data.summary, now());
   }
 
-  /** One model call with its own timeout; always records a model_calls row. */
-  private async attempt(
+  private attempt(
     base: Omit<ModelRequest, 'signal'>,
     meta: { storyId: string; jobId: string; attempt: number; timeoutMs: number },
-  ): Promise<{ kind: 'ok'; response: ModelResponse; callId: string } | { kind: 'error'; error: ModelError }> {
-    const { db, now, provider } = this.deps;
-    const controller = new AbortController();
-    this.controllers.add(controller);
-    const timer = setTimeout(() => controller.abort(), meta.timeoutMs);
-    const startedAt = now();
-    const t0 = Date.now();
-    const aborted = new Promise<never>((_, reject) =>
-      controller.signal.addEventListener('abort', () => reject(new ModelError('MODEL_TIMEOUT', '模型响应超时'))),
+  ): Promise<CallOutcome> {
+    return callModel(
+      { ...this.deps, controllers: this.controllers },
+      base,
+      { jobId: meta.jobId, storyId: meta.storyId, characterId: null, attempt: meta.attempt, timeoutMs: meta.timeoutMs, promptVersion: PROMPT_VERSION },
     );
-    aborted.catch(() => undefined);
-    let response: ModelResponse | undefined;
-    let error: ModelError | undefined;
-    try {
-      response = await Promise.race([provider.complete({ ...base, signal: controller.signal }), aborted]);
-    } catch (err) {
-      error = err instanceof ModelError ? err : new ModelError('INTERNAL', (err as Error).message);
-    } finally {
-      clearTimeout(timer);
-      this.controllers.delete(controller);
-    }
-    const callId = insertModelCall(db, {
-      jobId: meta.jobId,
-      storyId: meta.storyId,
-      purpose: base.purpose,
-      attempt: meta.attempt,
-      model: base.model,
-      provider: response?.provider ?? error?.opts.provider ?? null,
-      promptVersion: PROMPT_VERSION,
-      startedAt,
-      latencyMs: Date.now() - t0,
-      outcome: response ? 'ok' : 'error',
-      errorCode: error?.code ?? null,
-      finishReason: response?.finishReason ?? null,
-      usage: response?.usage ?? error?.opts.usage ?? { inputTokens: null, outputTokens: null, reasoningTokens: null, costUsd: null, costSource: 'unknown' },
-      requestJson: JSON.stringify({ model: base.model, system: base.system, user: base.user, maxTokens: base.maxTokens }),
-      responseText: response?.text ?? error?.opts.responseText ?? null,
-    });
-    this.deps.logger?.info(
-      { jobId: meta.jobId, attempt: meta.attempt, model: base.model, promptVersion: PROMPT_VERSION, latencyMs: Date.now() - t0, errorCode: error?.code },
-      'model call',
-    );
-    return response ? { kind: 'ok', response, callId } : { kind: 'error', error: error! };
   }
 
   /**

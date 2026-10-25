@@ -1,4 +1,13 @@
-import type { CharacterCard, MemoryKind, MemoryStatus, NarrativeStyle, StoryState } from '@cl/shared';
+import {
+  type CharacterCard,
+  type MemoryKind,
+  type MemoryStatus,
+  type NarrativeStyle,
+  PROFILE_SOURCE_LABELS,
+  type ProfileField,
+  profileLabel,
+  type StoryState,
+} from '@cl/shared';
 
 /** Conservative token estimate: one per CJK character, one per four other characters (SPEC §2.3). */
 export function estimateTokens(text: string): number {
@@ -39,6 +48,8 @@ export interface ChapterDigest {
 export interface ContextData {
   chapterNumber: number;
   card: CharacterCard;
+  /** AI-completed card fields frozen into the story ([推理]/[想象] marked); may be empty. */
+  profile: ProfileField[];
   state: StoryState | null;
   direction: { text: string; chaptersActive: number } | null;
   memories: ContextMemory[];
@@ -84,7 +95,15 @@ const EXCERPT_RADIUS = 150;
 const DORMANT_AFTER = 10;
 const DORMANT_LIMIT = 2;
 
-function renderCard(card: CharacterCard, compact: boolean): string {
+function renderProfile(fields: ProfileField[]): string {
+  const extra = fields.filter((f) => f.key !== 'name');
+  if (!extra.length) return '';
+  return `\n补全设定（[推理]/[想象] 是系统推断的细节；与角色卡原文或已发生的事实冲突时，以原文和事实为准）：\n${extra
+    .map((f) => `- ${profileLabel(f.key)}${f.source === 'original' ? '' : `[${PROFILE_SOURCE_LABELS[f.source]}]`}：${f.value}`)
+    .join('\n')}`;
+}
+
+function renderCard(card: CharacterCard, compact: boolean, profile: ProfileField[] = []): string {
   const lines: string[] = [`姓名：${card.name}`];
   if (card.age) lines.push(`年龄：${card.age}`);
   if (card.gender) lines.push(`性别：${card.gender}`);
@@ -100,7 +119,7 @@ function renderCard(card: CharacterCard, compact: boolean): string {
   }
   if (card.goals?.length) lines.push(`目标：${card.goals.join('；')}`);
   if (card.openingHint) lines.push(`开场情境（仅供第一章参考）：${card.openingHint}`);
-  return `<<<角色卡开始>>>\n${lines.join('\n')}\n<<<角色卡结束>>>`;
+  return `<<<角色卡开始>>>\n${lines.join('\n')}${compact ? '' : renderProfile(profile)}\n<<<角色卡结束>>>`;
 }
 
 const chapterList = (nums: number[]) => `第${nums.join('、')}章`;
@@ -182,7 +201,7 @@ export function assembleContext(
       out.push({ id, text: `【${title}】\n${body}`, trimmed });
 
     add('style', '叙述形式', STYLE_TEXT[data.card.narrativeStyle]);
-    add('card', '角色卡', renderCard(data.card, sel.cardCompact), sel.cardCompact);
+    add('card', '角色卡', renderCard(data.card, sel.cardCompact, data.profile), sel.cardCompact);
     add(
       'state',
       '当前状态',

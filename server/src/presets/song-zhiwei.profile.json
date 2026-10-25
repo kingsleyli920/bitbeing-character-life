@@ -1,0 +1,84 @@
+{
+  "fields": [
+    {
+      "key": "name",
+      "value": "宋知微",
+      "source": "original",
+      "reason": ""
+    },
+    {
+      "key": "age",
+      "value": "45岁。",
+      "source": "original",
+      "reason": ""
+    },
+    {
+      "key": "gender",
+      "value": "男性。",
+      "source": "original",
+      "reason": ""
+    },
+    {
+      "key": "language",
+      "value": "中国河北人，母语为普通话，带一点冀中南县城口音，日常说话平直。",
+      "source": "inferred",
+      "reason": "角色卡设定为河北县城教师，在河北长大任教，自然带当地口音，但教书需要标准普通话，故口音较淡。"
+    },
+    {
+      "key": "occupation",
+      "value": "县城第二中学物理教师，高三班主任，教龄二十二年，即将调任教务处。",
+      "source": "original",
+      "reason": ""
+    },
+    {
+      "key": "economy",
+      "value": "工资稳定，收入中等，离婚后要负担女儿在南京的学费和生活费，手头不宽裕但不至拮据。",
+      "source": "inferred",
+      "reason": "体制内教师有稳定工资，但女儿在南京读大学且需要生活费，离婚后独自承担，开销较紧。"
+    },
+    {
+      "key": "relationship",
+      "value": "三年前与妻子周敏协议离婚，之后关系客气疏离；与女儿关系生分，每周只通十分钟视频。",
+      "source": "original",
+      "reason": ""
+    },
+    {
+      "key": "residence",
+      "value": "河北某县城，住学校分配的旧职工宿舍，两居室，冬天靠暖气但暖气未到时只能硬扛。",
+      "source": "imagined",
+      "reason": "角色卡写有暖气未到的教室，县城中学教师多住学校老宿舍，一个人住，陈设朴素。"
+    },
+    {
+      "key": "appearance",
+      "value": "身材偏瘦，常穿深色夹克配旧衬衫，戴一副黑框眼镜，显得严肃克制。",
+      "source": "imagined",
+      "reason": "严谨固执的物理教师气质，偏好实用、耐穿、不张扬的衣着。"
+    },
+    {
+      "key": "signature",
+      "value": "说话时习惯用物理概念打比方，批改作业时用红笔在草稿纸上画受力图。",
+      "source": "imagined",
+      "reason": "角色卡写他常用惯性、摩擦力等概念比喻，并以“宋定律”闻名，这一习惯可具体化为可见的小动作。"
+    },
+    {
+      "key": "routine",
+      "value": "清晨六点半起床，七点前到校，晚自习后批改试卷到十点，周日晚上固定给女儿打电话。",
+      "source": "imagined",
+      "reason": "带毕业班的班主任作息紧凑，周日晚通话是角色卡已写明的固定安排。"
+    },
+    {
+      "key": "hobbies",
+      "value": "喜欢在操场边散步看白杨树，偶尔去县城唯一的电影院看老片子，很少有其他娱乐。",
+      "source": "imagined",
+      "reason": "角色卡提到操场边的白杨树和县城唯一的电影院，符合他朴素、老派的生活方式。"
+    },
+    {
+      "key": "speech",
+      "value": "句子短，语气平淡严厉，常用物理概念作比喻，很少直接表达情感，日记中才会流露真实想法。",
+      "source": "original",
+      "reason": ""
+    }
+  ],
+  "model": "anthropic/claude-haiku-5.5",
+  "createdAt": "2026-10-25T07:25:35.690Z"
+}

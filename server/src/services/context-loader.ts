@@ -2,6 +2,7 @@ import type { Direction } from '@cl/shared';
 import type { Db } from '../db/open.js';
 import { getChapter, getChapterBody, listDigests } from '../repos/chapters.js';
 import { listArcSummaries, listMemories, listTraitChanges } from '../repos/memories.js';
+import { getStoryProfileSnapshot } from '../repos/profiles.js';
 import type { StoryRecord } from '../repos/stories.js';
 import { ARC_SIZE, stitchedArc } from './arc-summary.js';
 import type { ContextData } from './context-builder.js';
@@ -12,6 +13,7 @@ export function loadContextData(db: Db, story: StoryRecord, chapterNumber: numbe
   return {
     chapterNumber,
     card: story.card,
+    profile: getStoryProfileSnapshot(db, story.id)?.fields ?? [],
     state: story.state,
     direction: direction ? { text: direction.text, chaptersActive: chapterNumber - direction.effectiveFromChapter } : null,
     memories: listMemories(db, story.id),

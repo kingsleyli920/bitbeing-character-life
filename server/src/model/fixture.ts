@@ -21,10 +21,10 @@ export function fixtureDraft(req: ModelRequest): ChapterDraft {
   const title = `${TITLES[(n - 1) % TITLES.length]}${n > TITLES.length ? `（${Math.ceil(n / TITLES.length)}）` : ''}`;
   const place = PLACES[n % PLACES.length]!;
   const paragraphs = [
-    `【Fixture 第 ${n} 章】这是确定性的测试文本，不是 AI 生成的故事。`,
+    `【Fixture 第 ${n} 段】这是确定性的测试文本，不是 AI 生成的故事。`,
     `${name}在${place}度过了这一天。早上的风有点凉，${name}把外套的拉链拉到下巴，想着昨天没说完的那句话。`,
     `配角${(n % 4) + 1}号走过来，问${name}最近怎么样。${name}笑了笑，说还行，又把话题岔开了。`,
-    directionText ? `这一章，读者给的走向是「${directionText}」，于是${name}遇到了一件和它有关的具体事情，并且承担了后果。` : `${name}按照自己的节奏生活，没有人催促。`,
+    directionText ? `这一段，读者给的走向是「${directionText}」，于是${name}遇到了一件和它有关的具体事情，并且承担了后果。` : `${name}按照自己的节奏生活，没有人催促。`,
     `傍晚的时候，${name}在${place}门口站了很久，最后决定明天再试一次。`.repeat(3),
     `这一段用来凑足字数，保证正文长度合规。`.repeat(12),
   ];
@@ -58,6 +58,12 @@ export function createFixtureProvider(opts: { delayMs: number }): ModelProvider 
       // Test hooks for full-stack error-state tests; only reachable with MODEL_PROVIDER=fixture.
       if (directive.includes('[fixture:unavailable]')) throw new ModelError('MODEL_UNAVAILABLE', '模型服务暂不可用（fixture）');
       if (directive.includes('[fixture:refuse]')) throw new ModelError('MODEL_REFUSED', '模型拒绝生成这段内容（fixture）');
+      if (req.purpose === 'profile') {
+        const fields = ['age', 'gender', 'language', 'occupation', 'economy', 'relationship', 'residence', 'appearance', 'signature', 'routine', 'hobbies', 'speech'].map(
+          (key, i) => ({ key, value: `【Fixture】${req.trace.characterName}的${key}`, source: i < 3 ? 'original' : i % 2 ? 'inferred' : 'imagined', reason: i < 3 ? '' : '测试数据' }),
+        );
+        return { text: JSON.stringify({ fields }), finishReason: 'stop', provider: 'fixture', usage: { inputTokens: null, outputTokens: null, reasoningTokens: null, costUsd: null, costSource: 'unknown' } };
+      }
       const text =
         req.purpose === 'arc_summary'
           ? JSON.stringify({ summary: `【Fixture 卷摘要】截至第 ${req.trace.chapterNumber - 1} 章，${req.trace.characterName}的生活按部就班地推进，几条线索仍在展开。` })
