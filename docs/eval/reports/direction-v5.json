@@ -1,0 +1,761 @@
+{
+  "scenario": "direction",
+  "description": "同一段历史（4 段）分出无走向 / 走向 A / 走向 B 三个分支各写 3 段（走向用作业文档里的示例），比较具体变化",
+  "model": "anthropic/claude-haiku-5.5",
+  "finishedAt": "2026-10-25T22:04:27.546Z",
+  "runSeconds": 1000,
+  "stoppedEarly": null,
+  "crashes": {},
+  "stories": {
+    "chen-yifan": {
+      "storyId": "b7b860b2-53df-49d2-8a40-93ff9ff2fd74",
+      "chapters": 4,
+      "bodyChars": {
+        "min": 1129,
+        "avg": 1252,
+        "max": 1533
+      },
+      "jobs": {
+        "succeeded": 4
+      },
+      "jobsNeedingRetry": 1,
+      "calls": {
+        "chapter": {
+          "ok": 4,
+          "invalid": 1
+        },
+        "arc": {},
+        "consistency": {
+          "ok": 4
+        }
+      },
+      "latencyMs": {
+        "p50": 26399,
+        "p95": 34071,
+        "max": 34071
+      },
+      "tokens": {
+        "input": 57731,
+        "output": 24333,
+        "reasoning": 10191
+      },
+      "costUsd": {
+        "total": 0.01794,
+        "reported": 0.01794,
+        "estimated": 0,
+        "unknownCalls": 0
+      },
+      "context": {
+        "maxTokens": 6226,
+        "avgTokens": 5323
+      },
+      "repetition": {
+        "beatTagRepeatRate": 0,
+        "duplicateTitles": [],
+        "consecutiveSimilarity": {
+          "avg": 0.02,
+          "max": 0.023,
+          "maxAt": 2
+        }
+      },
+      "memory": {
+        "person:active": 4,
+        "event:active": 4,
+        "thread:open": 3,
+        "trait:active": 1
+      },
+      "traitChanges": 0,
+      "arcSummaries": 0,
+      "directionChapters": 0,
+      "pacing": {
+        "threadsResolved": 0,
+        "threadsOpen": 3,
+        "resolutionRate": 0,
+        "oldestOpenThreadAge": 3,
+        "arcsSayingUnresolved": 0,
+        "distinctLocations": 4,
+        "storyDays": 2
+      },
+      "calendar": {
+        "firstDate": "2024-10-17",
+        "lastDate": "2024-10-19",
+        "spanDays": 3,
+        "jumpsOver7Days": 0,
+        "maxJumpDays": 1,
+        "weekdayMismatches": 0
+      },
+      "lifeAreas": {
+        "main": {
+          "工作学业": 4
+        },
+        "topShare": 1,
+        "maxWindowShare": 0
+      },
+      "consistency": {
+        "rewrites": 0,
+        "hardIssuesFound": 0,
+        "softWarnings": 4,
+        "savedWithHardIssues": 0
+      }
+    },
+    "a-xiu": {
+      "storyId": "fde5c467-2c25-4d0a-88b7-ee05a61dc892",
+      "chapters": 4,
+      "bodyChars": {
+        "min": 1235,
+        "avg": 1267,
+        "max": 1309
+      },
+      "jobs": {
+        "succeeded": 4
+      },
+      "jobsNeedingRetry": 1,
+      "calls": {
+        "chapter": {
+          "ok": 4,
+          "invalid": 1
+        },
+        "arc": {},
+        "consistency": {
+          "ok": 5
+        }
+      },
+      "latencyMs": {
+        "p50": 17923,
+        "p95": 23294,
+        "max": 23294
+      },
+      "tokens": {
+        "input": 64117,
+        "output": 19005,
+        "reasoning": 6085
+      },
+      "costUsd": {
+        "total": 0.01591,
+        "reported": 0.01591,
+        "estimated": 0,
+        "unknownCalls": 0
+      },
+      "context": {
+        "maxTokens": 6555,
+        "avgTokens": 5389
+      },
+      "repetition": {
+        "beatTagRepeatRate": 0.25,
+        "duplicateTitles": [],
+        "consecutiveSimilarity": {
+          "avg": 0.016,
+          "max": 0.021,
+          "maxAt": 4
+        }
+      },
+      "memory": {
+        "thread:open": 2,
+        "event:active": 2,
+        "person:active": 4,
+        "trait:active": 1
+      },
+      "traitChanges": 0,
+      "arcSummaries": 0,
+      "directionChapters": 0,
+      "pacing": {
+        "threadsResolved": 0,
+        "threadsOpen": 2,
+        "resolutionRate": 0,
+        "oldestOpenThreadAge": 3,
+        "arcsSayingUnresolved": 0,
+        "distinctLocations": 4,
+        "storyDays": 3
+      },
+      "calendar": {
+        "firstDate": "2024-07-06",
+        "lastDate": "2024-07-09",
+        "spanDays": 4,
+        "jumpsOver7Days": 0,
+        "maxJumpDays": 1,
+        "weekdayMismatches": 0
+      },
+      "lifeAreas": {
+        "main": {
+          "家人": 2,
+          "居所日常": 2
+        },
+        "topShare": 0.5,
+        "maxWindowShare": 0
+      },
+      "consistency": {
+        "rewrites": 1,
+        "hardIssuesFound": 1,
+        "softWarnings": 0,
+        "savedWithHardIssues": 0
+      }
+    }
+  },
+  "branches": {
+    "chen-yifan-control": {
+      "storyId": "b7b860b2-53df-49d2-8a40-93ff9ff2fd74",
+      "chapters": 7,
+      "bodyChars": {
+        "min": 785,
+        "avg": 1103,
+        "max": 1533
+      },
+      "jobs": {
+        "succeeded": 7
+      },
+      "jobsNeedingRetry": 1,
+      "calls": {
+        "chapter": {
+          "ok": 7,
+          "invalid": 1
+        },
+        "arc": {},
+        "consistency": {
+          "ok": 7
+        }
+      },
+      "latencyMs": {
+        "p50": 26399,
+        "p95": 34071,
+        "max": 34071
+      },
+      "tokens": {
+        "input": 103059,
+        "output": 40568,
+        "reasoning": 20131
+      },
+      "costUsd": {
+        "total": 0.03059,
+        "reported": 0.03059,
+        "estimated": 0,
+        "unknownCalls": 0
+      },
+      "context": {
+        "maxTokens": 7073,
+        "avgTokens": 5969
+      },
+      "repetition": {
+        "beatTagRepeatRate": 0,
+        "duplicateTitles": [],
+        "consecutiveSimilarity": {
+          "avg": 0.017,
+          "max": 0.023,
+          "maxAt": 2
+        }
+      },
+      "memory": {
+        "person:active": 5,
+        "event:active": 8,
+        "thread:open": 3,
+        "thread:resolved": 1,
+        "trait:active": 1
+      },
+      "traitChanges": 0,
+      "arcSummaries": 0,
+      "directionChapters": 0,
+      "pacing": {
+        "threadsResolved": 1,
+        "threadsOpen": 3,
+        "resolutionRate": 0.25,
+        "oldestOpenThreadAge": 6,
+        "arcsSayingUnresolved": 0,
+        "distinctLocations": 7,
+        "storyDays": 27
+      },
+      "calendar": {
+        "firstDate": "2024-10-17",
+        "lastDate": "2024-11-13",
+        "spanDays": 28,
+        "jumpsOver7Days": 1,
+        "maxJumpDays": 21,
+        "weekdayMismatches": 0
+      },
+      "lifeAreas": {
+        "main": {
+          "工作学业": 5,
+          "身体": 1,
+          "邻里社区": 1
+        },
+        "topShare": 0.71,
+        "maxWindowShare": 0
+      },
+      "consistency": {
+        "rewrites": 0,
+        "hardIssuesFound": 0,
+        "softWarnings": 6,
+        "savedWithHardIssues": 0
+      }
+    },
+    "chen-yifan-tragic": {
+      "storyId": "b7b860b2-53df-49d2-8a40-93ff9ff2fd74",
+      "chapters": 7,
+      "bodyChars": {
+        "min": 806,
+        "avg": 1142,
+        "max": 1533
+      },
+      "jobs": {
+        "succeeded": 7
+      },
+      "jobsNeedingRetry": 2,
+      "calls": {
+        "chapter": {
+          "ok": 7,
+          "invalid": 2
+        },
+        "arc": {},
+        "consistency": {
+          "ok": 8
+        }
+      },
+      "latencyMs": {
+        "p50": 26399,
+        "p95": 34071,
+        "max": 34071
+      },
+      "tokens": {
+        "input": 118393,
+        "output": 44589,
+        "reasoning": 21031
+      },
+      "costUsd": {
+        "total": 0.03413,
+        "reported": 0.03413,
+        "estimated": 0,
+        "unknownCalls": 0
+      },
+      "context": {
+        "maxTokens": 7027,
+        "avgTokens": 5992
+      },
+      "repetition": {
+        "beatTagRepeatRate": 0,
+        "duplicateTitles": [],
+        "consecutiveSimilarity": {
+          "avg": 0.02,
+          "max": 0.026,
+          "maxAt": 6
+        }
+      },
+      "memory": {
+        "person:active": 4,
+        "event:active": 8,
+        "thread:resolved": 1,
+        "thread:open": 2,
+        "promise:open": 1,
+        "trait:active": 1
+      },
+      "traitChanges": 0,
+      "arcSummaries": 0,
+      "directionChapters": 3,
+      "pacing": {
+        "threadsResolved": 1,
+        "threadsOpen": 3,
+        "resolutionRate": 0.25,
+        "oldestOpenThreadAge": 6,
+        "arcsSayingUnresolved": 0,
+        "distinctLocations": 4,
+        "storyDays": 18
+      },
+      "calendar": {
+        "firstDate": "2024-10-17",
+        "lastDate": "2024-11-04",
+        "spanDays": 19,
+        "jumpsOver7Days": 1,
+        "maxJumpDays": 14,
+        "weekdayMismatches": 0
+      },
+      "lifeAreas": {
+        "main": {
+          "工作学业": 6,
+          "钱": 1
+        },
+        "topShare": 0.86,
+        "maxWindowShare": 0
+      },
+      "consistency": {
+        "rewrites": 1,
+        "hardIssuesFound": 1,
+        "softWarnings": 7,
+        "savedWithHardIssues": 0
+      }
+    },
+    "chen-yifan-romance": {
+      "storyId": "b7b860b2-53df-49d2-8a40-93ff9ff2fd74",
+      "chapters": 7,
+      "bodyChars": {
+        "min": 742,
+        "avg": 1137,
+        "max": 1533
+      },
+      "jobs": {
+        "succeeded": 7
+      },
+      "jobsNeedingRetry": 2,
+      "calls": {
+        "chapter": {
+          "ok": 7,
+          "invalid": 2
+        },
+        "arc": {},
+        "consistency": {
+          "ok": 7
+        }
+      },
+      "latencyMs": {
+        "p50": 26320,
+        "p95": 34071,
+        "max": 34071
+      },
+      "tokens": {
+        "input": 113172,
+        "output": 43246,
+        "reasoning": 19715
+      },
+      "costUsd": {
+        "total": 0.03294,
+        "reported": 0.03294,
+        "estimated": 0,
+        "unknownCalls": 0
+      },
+      "context": {
+        "maxTokens": 7142,
+        "avgTokens": 5996
+      },
+      "repetition": {
+        "beatTagRepeatRate": 0,
+        "duplicateTitles": [],
+        "consecutiveSimilarity": {
+          "avg": 0.016,
+          "max": 0.023,
+          "maxAt": 2
+        }
+      },
+      "memory": {
+        "person:active": 4,
+        "event:active": 8,
+        "promise:resolved": 1,
+        "trait:active": 2,
+        "thread:open": 3
+      },
+      "traitChanges": 0,
+      "arcSummaries": 0,
+      "directionChapters": 3,
+      "pacing": {
+        "threadsResolved": 1,
+        "threadsOpen": 3,
+        "resolutionRate": 0.25,
+        "oldestOpenThreadAge": 6,
+        "arcsSayingUnresolved": 0,
+        "distinctLocations": 7,
+        "storyDays": 20
+      },
+      "calendar": {
+        "firstDate": "2024-10-17",
+        "lastDate": "2024-11-06",
+        "spanDays": 21,
+        "jumpsOver7Days": 1,
+        "maxJumpDays": 14,
+        "weekdayMismatches": 0
+      },
+      "lifeAreas": {
+        "main": {
+          "工作学业": 6,
+          "感情": 1
+        },
+        "topShare": 0.86,
+        "maxWindowShare": 0
+      },
+      "consistency": {
+        "rewrites": 0,
+        "hardIssuesFound": 0,
+        "softWarnings": 5,
+        "savedWithHardIssues": 0
+      }
+    },
+    "a-xiu-control": {
+      "storyId": "fde5c467-2c25-4d0a-88b7-ee05a61dc892",
+      "chapters": 7,
+      "bodyChars": {
+        "min": 1023,
+        "avg": 1213,
+        "max": 1309
+      },
+      "jobs": {
+        "succeeded": 7
+      },
+      "jobsNeedingRetry": 2,
+      "calls": {
+        "chapter": {
+          "ok": 7,
+          "invalid": 3
+        },
+        "arc": {},
+        "consistency": {
+          "ok": 10
+        }
+      },
+      "latencyMs": {
+        "p50": 17615,
+        "p95": 28930,
+        "max": 28930
+      },
+      "tokens": {
+        "input": 143942,
+        "output": 39693,
+        "reasoning": 14481
+      },
+      "costUsd": {
+        "total": 0.03424,
+        "reported": 0.03424,
+        "estimated": 0,
+        "unknownCalls": 0
+      },
+      "context": {
+        "maxTokens": 7354,
+        "avgTokens": 6124
+      },
+      "repetition": {
+        "beatTagRepeatRate": 0.143,
+        "duplicateTitles": [],
+        "consecutiveSimilarity": {
+          "avg": 0.014,
+          "max": 0.021,
+          "maxAt": 4
+        }
+      },
+      "memory": {
+        "thread:open": 2,
+        "thread:resolved": 1,
+        "event:active": 3,
+        "person:active": 7,
+        "trait:active": 1,
+        "promise:open": 1
+      },
+      "traitChanges": 0,
+      "arcSummaries": 0,
+      "directionChapters": 0,
+      "pacing": {
+        "threadsResolved": 1,
+        "threadsOpen": 3,
+        "resolutionRate": 0.25,
+        "oldestOpenThreadAge": 6,
+        "arcsSayingUnresolved": 0,
+        "distinctLocations": 7,
+        "storyDays": 9
+      },
+      "calendar": {
+        "firstDate": "2024-07-06",
+        "lastDate": "2024-07-15",
+        "spanDays": 10,
+        "jumpsOver7Days": 0,
+        "maxJumpDays": 3,
+        "weekdayMismatches": 0
+      },
+      "lifeAreas": {
+        "main": {
+          "家人": 2,
+          "居所日常": 3,
+          "钱": 2
+        },
+        "topShare": 0.43,
+        "maxWindowShare": 0
+      },
+      "consistency": {
+        "rewrites": 3,
+        "hardIssuesFound": 3,
+        "softWarnings": 1,
+        "savedWithHardIssues": 0
+      }
+    },
+    "a-xiu-adventure": {
+      "storyId": "fde5c467-2c25-4d0a-88b7-ee05a61dc892",
+      "chapters": 7,
+      "bodyChars": {
+        "min": 548,
+        "avg": 1051,
+        "max": 1309
+      },
+      "jobs": {
+        "succeeded": 7
+      },
+      "jobsNeedingRetry": 2,
+      "calls": {
+        "chapter": {
+          "ok": 7,
+          "invalid": 2
+        },
+        "arc": {},
+        "consistency": {
+          "ok": 9
+        }
+      },
+      "latencyMs": {
+        "p50": 18161,
+        "p95": 25414,
+        "max": 25414
+      },
+      "tokens": {
+        "input": 125744,
+        "output": 36768,
+        "reasoning": 15584
+      },
+      "costUsd": {
+        "total": 0.03096,
+        "reported": 0.03096,
+        "estimated": 0,
+        "unknownCalls": 0
+      },
+      "context": {
+        "maxTokens": 7166,
+        "avgTokens": 6087
+      },
+      "repetition": {
+        "beatTagRepeatRate": 0.143,
+        "duplicateTitles": [],
+        "consecutiveSimilarity": {
+          "avg": 0.011,
+          "max": 0.021,
+          "maxAt": 4
+        }
+      },
+      "memory": {
+        "person:active": 7,
+        "event:active": 3,
+        "thread:open": 2,
+        "promise:resolved": 1,
+        "trait:active": 1
+      },
+      "traitChanges": 0,
+      "arcSummaries": 0,
+      "directionChapters": 3,
+      "pacing": {
+        "threadsResolved": 1,
+        "threadsOpen": 2,
+        "resolutionRate": 0.33,
+        "oldestOpenThreadAge": 6,
+        "arcsSayingUnresolved": 0,
+        "distinctLocations": 7,
+        "storyDays": 10
+      },
+      "calendar": {
+        "firstDate": "2024-07-06",
+        "lastDate": "2024-07-16",
+        "spanDays": 11,
+        "jumpsOver7Days": 1,
+        "maxJumpDays": 7,
+        "weekdayMismatches": 0
+      },
+      "lifeAreas": {
+        "main": {
+          "家人": 3,
+          "居所日常": 2,
+          "钱": 2
+        },
+        "topShare": 0.43,
+        "maxWindowShare": 0
+      },
+      "consistency": {
+        "rewrites": 2,
+        "hardIssuesFound": 2,
+        "softWarnings": 0,
+        "savedWithHardIssues": 0
+      }
+    },
+    "a-xiu-philosophy": {
+      "storyId": "fde5c467-2c25-4d0a-88b7-ee05a61dc892",
+      "chapters": 7,
+      "bodyChars": {
+        "min": 1011,
+        "avg": 1190,
+        "max": 1309
+      },
+      "jobs": {
+        "succeeded": 7
+      },
+      "jobsNeedingRetry": 2,
+      "calls": {
+        "chapter": {
+          "ok": 7,
+          "invalid": 2
+        },
+        "arc": {},
+        "consistency": {
+          "ok": 9
+        }
+      },
+      "latencyMs": {
+        "p50": 18161,
+        "p95": 28887,
+        "max": 28887
+      },
+      "tokens": {
+        "input": 128090,
+        "output": 38600,
+        "reasoning": 15947
+      },
+      "costUsd": {
+        "total": 0.03211,
+        "reported": 0.03211,
+        "estimated": 0,
+        "unknownCalls": 0
+      },
+      "context": {
+        "maxTokens": 7504,
+        "avgTokens": 6165
+      },
+      "repetition": {
+        "beatTagRepeatRate": 0.143,
+        "duplicateTitles": [],
+        "consecutiveSimilarity": {
+          "avg": 0.016,
+          "max": 0.021,
+          "maxAt": 4
+        }
+      },
+      "memory": {
+        "event:active": 6,
+        "thread:open": 3,
+        "promise:open": 1,
+        "person:active": 7,
+        "trait:active": 1
+      },
+      "traitChanges": 0,
+      "arcSummaries": 0,
+      "directionChapters": 3,
+      "pacing": {
+        "threadsResolved": 0,
+        "threadsOpen": 4,
+        "resolutionRate": 0,
+        "oldestOpenThreadAge": 6,
+        "arcsSayingUnresolved": 0,
+        "distinctLocations": 7,
+        "storyDays": 12
+      },
+      "calendar": {
+        "firstDate": "2024-07-06",
+        "lastDate": "2024-07-18",
+        "spanDays": 13,
+        "jumpsOver7Days": 1,
+        "maxJumpDays": 7,
+        "weekdayMismatches": 0
+      },
+      "lifeAreas": {
+        "main": {
+          "家人": 2,
+          "居所日常": 4,
+          "邻里社区": 1
+        },
+        "topShare": 0.57,
+        "maxWindowShare": 0
+      },
+      "consistency": {
+        "rewrites": 2,
+        "hardIssuesFound": 3,
+        "softWarnings": 0,
+        "savedWithHardIssues": 0
+      }
+    }
+  },
+  "totalCostUsd": 0.12727
+}
