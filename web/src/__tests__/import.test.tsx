@@ -2,7 +2,9 @@ import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { describe, expect, it } from 'vitest';
-import { presetSummaries, server } from '../test/msw';
+import { installStoryBackend } from '../test/fakeBackend';
+import { STORY_ID } from '../test/fixtures';
+import { server } from '../test/msw';
 import { renderApp } from '../test/render';
 
 const imported = { id: 'imp-1', source: 'import', name: '程雨', identity: null, age: null, narrativeStyle: 'novel', tagline: '大理咖啡馆', latestStory: null };
@@ -20,8 +22,9 @@ function captureImports(response: () => Response) {
 }
 
 async function openDialog() {
+  installStoryBackend();
   const user = userEvent.setup();
-  renderApp('/');
+  renderApp(`/stories/${STORY_ID}`);
   await user.click(await screen.findByRole('button', { name: '导入角色' }));
   return { user, dialog: screen.getByRole('dialog', { name: '导入角色' }) };
 }
@@ -87,26 +90,3 @@ describe('Import dialog', () => {
   });
 });
 
-describe('Deleting an imported character', () => {
-  it('asks inline before deleting', async () => {
-    let deleted = 0;
-    let characters = [...presetSummaries, imported];
-    server.use(
-      http.get('/api/characters', () => HttpResponse.json({ characters })),
-      http.delete('/api/characters/imp-1', () => {
-        deleted++;
-        characters = presetSummaries;
-        return new HttpResponse(null, { status: 204 });
-      }),
-    );
-    const user = userEvent.setup();
-    renderApp('/');
-    await user.click(await screen.findByRole('button', { name: '删除程雨' }));
-    expect(deleted).toBe(0);
-    const confirm = screen.getByRole('group', { name: '确认删除程雨' });
-    await user.click(within(confirm).getByRole('button', { name: '确认删除' }));
-    await waitFor(() => expect(screen.queryByText('程雨')).not.toBeInTheDocument());
-    expect(deleted).toBe(1);
-    expect(screen.queryByRole('button', { name: '删除林晚' })).not.toBeInTheDocument();
-  });
-});

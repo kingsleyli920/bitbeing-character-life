@@ -41,6 +41,8 @@ export async function mockBackend(page: Page, opts: { failFirstJobPost?: boolean
     id: STORY_ID,
     characterId: 'zhou-ye',
     card,
+    profile: { status: 'ready', profile: { fields: [{ key: 'name', value: '周野', source: 'original', reason: '' }], model: 'fixture', createdAt: now() }, error: null },
+    profileFrozen: false,
     state: null,
     chapterCount: 0,
     version: 0,
@@ -53,6 +55,7 @@ export async function mockBackend(page: Page, opts: { failFirstJobPost?: boolean
   });
   const json = (route: Route, body: unknown, status = 200) => route.fulfill({ status, json: body });
 
+  await page.route('**/api/characters', (r) => json(r, { characters: [] }));
   await page.route('**/api/meta', (r) => json(r, { provider: 'fixture', model: 'fixture', modelConfigured: true, budget: { capUsd: 5, spentUsd: 0 } }));
   await page.route(`**/api/stories/${STORY_ID}`, (r) => json(r, story()));
   await page.route(`**/api/stories/${STORY_ID}/memory`, (r) => json(r, { items: [], traitChanges: [], arcSummaries: [] }));

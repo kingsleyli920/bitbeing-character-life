@@ -17,6 +17,8 @@ export class ScriptedProvider implements ModelProvider {
   configured = true;
   readonly calls: ModelRequest[] = [];
   readonly arcCalls: ModelRequest[] = [];
+  readonly profileCalls: ModelRequest[] = [];
+  private readonly profileSteps: Step[] = [];
   private readonly steps: Step[] = [];
   private readonly arcSteps: Step[] = [];
   /** Builds the default draft for a chapter when no step is queued. */
@@ -27,6 +29,12 @@ export class ScriptedProvider implements ModelProvider {
 
   push(...steps: Step[]): this {
     this.steps.push(...steps);
+    return this;
+  }
+
+  /** Steps for profile calls (default: a valid profile). */
+  pushProfile(...steps: Step[]): this {
+    this.profileSteps.push(...steps);
     return this;
   }
 
@@ -48,6 +56,11 @@ export class ScriptedProvider implements ModelProvider {
   }
 
   async complete(req: ModelRequest): Promise<ModelResponse> {
+    if (req.purpose === 'profile') {
+      this.profileCalls.push(req);
+      const step = this.profileSteps.shift() ?? { kind: 'text', text: JSON.stringify(scriptedProfile()) };
+      return this.run(step, req);
+    }
     if (req.purpose === 'arc_summary') {
       this.arcCalls.push(req);
       const step = this.arcSteps.shift() ?? { kind: 'text', text: JSON.stringify({ summary: `卷摘要：${'这一卷发生了很多事。'.repeat(5)}` }) };
@@ -93,4 +106,16 @@ export class ScriptedProvider implements ModelProvider {
       usage: { inputTokens: 1000, outputTokens: 500, reasoningTokens: 0, costUsd, costSource: 'reported' },
     };
   }
+}
+
+export function scriptedProfile() {
+  const keys = ['age', 'gender', 'language', 'occupation', 'economy', 'relationship', 'residence', 'appearance', 'signature'];
+  return {
+    fields: keys.map((key, i) => ({
+      key,
+      value: key === 'economy' ? '手头紧，靠接单维持' : `${key} 的说明`,
+      source: i < 2 ? 'original' : i % 2 ? 'inferred' : 'imagined',
+      reason: i < 2 ? '' : '根据背景推断',
+    })),
+  };
 }

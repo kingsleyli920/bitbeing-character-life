@@ -38,6 +38,7 @@ function data(over: Partial<ContextData> = {}): ContextData {
   return {
     chapterNumber,
     card,
+    profile: [],
     state: { time: '十月夜', location: '成都', situation: '主唱退出', goals: ['找主唱'], mood: '烦躁' },
     direction: null,
     memories: [],
@@ -71,6 +72,21 @@ describe('assembleContext', () => {
     expect(ctx.user).toContain('让他遇到一次事业挫折');
     expect(ctx.user).toContain('已生效 2 章');
     expect(ctx.user).toContain('请写第 4 章');
+  });
+
+  it('adds completed profile fields to the card with their source marked', () => {
+    const ctx = build(
+      data({
+        profile: [
+          { key: 'name', value: '周野', source: 'original', reason: '' },
+          { key: 'economy', value: '手头紧', source: 'inferred', reason: '在还钱' },
+          { key: 'appearance', value: '常穿褪色的乐队 T 恤', source: 'imagined', reason: '' },
+          { key: 'age', value: '27 岁', source: 'original', reason: '' },
+        ],
+      }),
+    );
+    expect(ctx.user).toMatch(/<<<角色卡开始>>>[\s\S]*补全设定[\s\S]*- 经济状态\[推理\]：手头紧[\s\S]*- 穿衣风格\[想象\]：常穿褪色的乐队 T 恤[\s\S]*- 年龄：27 岁[\s\S]*<<<角色卡结束>>>/);
+    expect(ctx.user).toContain('以原文和事实为准');
   });
 
   it('wraps user-provided data in explicit data blocks', () => {

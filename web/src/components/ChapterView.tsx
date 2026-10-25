@@ -21,25 +21,28 @@ export function splitParagraphs(body: string): string[] {
     .filter(Boolean);
 }
 
+/** One 生活故事序列 box. */
 export function ChapterView({ chapter }: { chapter: Chapter }) {
   const headingId = `chapter-${chapter.number}-title`;
   return (
-    <article className="chapter" id={`chapter-${chapter.number}`} aria-labelledby={headingId} data-testid="chapter">
-      <p className="chapter-no">第 {chapter.number} 章</p>
-      <h2 className="chapter-title" id={headingId}>
-        {chapter.title}
-      </h2>
-      <p className="chapter-meta">
-        {chapter.storyTime} · {chapter.location}
-      </p>
-      <div className="chapter-body">
+    <article className="segment" id={`chapter-${chapter.number}`} aria-labelledby={headingId} data-testid="chapter">
+      <header className="segment-head">
+        <span className="segment-no">生活故事序列 {chapter.number}</span>
+        <h3 className="segment-title" id={headingId}>
+          {chapter.title}
+        </h3>
+        <span className="segment-meta">
+          {chapter.storyTime} · {chapter.location}
+        </span>
+      </header>
+      <div className="segment-body">
         {splitParagraphs(chapter.body).map((p, i) => (
           <Paragraph key={i} text={p} />
         ))}
       </div>
       {chapter.direction && (
-        <details className="chapter-direction">
-          <summary>本章走向：{chapter.direction.text}</summary>
+        <details className="segment-direction">
+          <summary>本段走向：{chapter.direction.text}</summary>
           {chapter.directionHandling && (
             <>
               <p>{chapter.directionHandling.how}</p>

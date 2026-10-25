@@ -1,0 +1,84 @@
+{
+  "fields": [
+    {
+      "key": "name",
+      "value": "林晚",
+      "source": "original",
+      "reason": ""
+    },
+    {
+      "key": "age",
+      "value": "32岁",
+      "source": "original",
+      "reason": ""
+    },
+    {
+      "key": "gender",
+      "value": "女",
+      "source": "original",
+      "reason": ""
+    },
+    {
+      "key": "language",
+      "value": "上海人，母语为上海话与普通话并用，母亲在苏州，家中偶尔夹杂苏州口音。",
+      "source": "inferred",
+      "reason": "在上海工作生活，母亲住苏州，家庭语言环境自然混杂 → 能说上海话和普通话，偶尔听到苏州腔"
+    },
+    {
+      "key": "occupation",
+      "value": "旧物修复师，经营「晚晴修复」，修旧收音机、钟表、老照片和旧信件；曾任电台深夜情感节目主持人。",
+      "source": "original",
+      "reason": ""
+    },
+    {
+      "key": "economy",
+      "value": "积蓄已全部投入铺子，账上现金只够付两个月房租，生意清淡，经济压力明显。",
+      "source": "original",
+      "reason": ""
+    },
+    {
+      "key": "relationship",
+      "value": "单身，与前男友陆川分手两年，之后没有再联系，对新的感情保持距离。",
+      "source": "original",
+      "reason": ""
+    },
+    {
+      "key": "residence",
+      "value": "静安区一条老弄堂里的石库门房子，楼下是一间修复铺，隔壁是老葛的裁缝铺，附近有早点摊。",
+      "source": "original",
+      "reason": ""
+    },
+    {
+      "key": "appearance",
+      "value": "穿着简单素净，棉麻衬衫配深色长裤或半身裙，袖口常卷起，方便干活，不戴张扬的首饰。",
+      "source": "imagined",
+      "reason": "长期做精细手工活，又性格克制低调，衣着应实用朴素，不刻意打扮"
+    },
+    {
+      "key": "signature",
+      "value": "工作台上摆着父亲留下的那台修不响的红灯牌收音机，她总会时不时看一眼。",
+      "source": "original",
+      "reason": ""
+    },
+    {
+      "key": "routine",
+      "value": "白天在铺子里修东西、接待客人，傍晚收工后整理工具，失眠的夜里常坐在工作台边对着空气小声“播音”。",
+      "source": "inferred",
+      "reason": "铺子开张、以手工为主 → 白天工作，夜间失眠且有过深夜节目经历 → 夜里习惯独处自语"
+    },
+    {
+      "key": "hobbies",
+      "value": "喜欢收集老物件和旧磁带，听老式收音机里的节目，偶尔在心里编排深夜广播的稿子。",
+      "source": "imagined",
+      "reason": "与旧物修复和深夜电台的职业背景相衔接，爱好应是工作的延伸而非另起炉灶"
+    },
+    {
+      "key": "speech",
+      "value": "说话轻而慢，常用问句引导对方继续讲，很少直接谈自己的情绪；偶尔冒出电台腔，说完自嘲一笑。",
+      "source": "original",
+      "reason": ""
+    }
+  ],
+  "model": "anthropic/claude-haiku-5.5",
+  "createdAt": "2026-10-25T07:25:34.710Z"
+}

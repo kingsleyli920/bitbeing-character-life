@@ -1,7 +1,8 @@
-/** Schema version 1 (docs/SPEC.md §4.3). Bump `SCHEMA_VERSION` and add a migration step when changing it. */
-export const SCHEMA_VERSION = 1;
+/** Current schema version (docs/SPEC.md §4.3). Bump it and append a step to `MIGRATIONS` when changing the schema. */
+export const SCHEMA_VERSION = 2;
 
-export const SCHEMA_SQL = `
+/** Version 1, as shipped in M2–M5. New databases are created from it and then migrated. */
+export const SCHEMA_V1_SQL = `
 CREATE TABLE IF NOT EXISTS characters (
   id TEXT PRIMARY KEY,
   source TEXT NOT NULL CHECK (source IN ('preset', 'import')),
@@ -132,3 +133,52 @@ CREATE TABLE IF NOT EXISTS model_calls (
 );
 CREATE INDEX IF NOT EXISTS model_calls_by_job ON model_calls(job_id);
 `;
+
+/** Ordered migrations; `version` is the schema version after the step runs. */
+export const MIGRATIONS: { version: number; sql: string }[] = [
+  {
+    // Character profiles (AI-completed card fields) and model calls that belong to a character, not a job.
+    // model_calls no longer cascades from jobs, so deleting a character keeps its spend history.
+    version: 2,
+    sql: `
+ALTER TABLE characters ADD COLUMN profile_json TEXT;
+ALTER TABLE characters ADD COLUMN profile_status TEXT NOT NULL DEFAULT 'none';
+ALTER TABLE characters ADD COLUMN profile_error TEXT;
+ALTER TABLE stories ADD COLUMN profile_snapshot TEXT;
+
+CREATE TABLE model_calls_v2 (
+  id TEXT PRIMARY KEY,
+  job_id TEXT,
+  story_id TEXT,
+  character_id TEXT,
+  purpose TEXT NOT NULL CHECK (purpose IN ('chapter', 'arc_summary', 'profile')),
+  attempt INTEGER NOT NULL,
+  model TEXT NOT NULL,
+  provider TEXT,
+  prompt_version TEXT NOT NULL,
+  started_at TEXT NOT NULL,
+  latency_ms INTEGER,
+  outcome TEXT NOT NULL,
+  error_code TEXT,
+  error_message TEXT,
+  finish_reason TEXT,
+  input_tokens INTEGER,
+  output_tokens INTEGER,
+  reasoning_tokens INTEGER,
+  cost_usd REAL,
+  cost_source TEXT NOT NULL,
+  request_json TEXT NOT NULL,
+  response_text TEXT
+);
+INSERT INTO model_calls_v2 (id, job_id, story_id, purpose, attempt, model, provider, prompt_version, started_at, latency_ms,
+  outcome, error_code, finish_reason, input_tokens, output_tokens, reasoning_tokens, cost_usd, cost_source, request_json, response_text)
+SELECT id, job_id, story_id, purpose, attempt, model, provider, prompt_version, started_at, latency_ms,
+  outcome, error_code, finish_reason, input_tokens, output_tokens, reasoning_tokens, cost_usd, cost_source, request_json, response_text
+FROM model_calls;
+DROP TABLE model_calls;
+ALTER TABLE model_calls_v2 RENAME TO model_calls;
+CREATE INDEX model_calls_by_job ON model_calls(job_id);
+CREATE INDEX model_calls_by_character ON model_calls(character_id);
+`,
+  },
+];

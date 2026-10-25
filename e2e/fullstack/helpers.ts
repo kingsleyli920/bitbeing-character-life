@@ -7,15 +7,17 @@ export async function resetBackend(page: Page) {
 
 export function collectConsoleErrors(page: Page): string[] {
   const errors: string[] = [];
-  page.on('console', (msg) => msg.type() === 'error' && errors.push(msg.text()));
+  page.on('console', (msg) => msg.type() === 'error' && errors.push(`${msg.text()} @ ${msg.location().url}`));
   page.on('pageerror', (err) => errors.push(err.message));
   return errors;
 }
 
 export async function setDirection(page: Page, text: string) {
-  await page.getByRole('button', { name: '调整走向' }).click();
-  const dialog = page.getByRole('dialog', { name: '调整故事走向' });
-  await dialog.getByLabel('希望接下来发生什么？').fill(text);
-  await dialog.getByRole('button', { name: '保存走向' }).click();
-  await expect(dialog).toBeHidden();
+  await page.getByRole('button', { name: '故事走向' }).click();
+  const pop = page.getByRole('dialog', { name: '故事走向' });
+  await pop.getByLabel('故事走向').fill(text);
+  await pop.getByRole('button', { name: '保存走向' }).click();
+  await expect(pop).toBeHidden();
 }
+
+export const segment = (page: Page, n: number) => page.locator(`#chapter-${n}`);
