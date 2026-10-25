@@ -12,12 +12,9 @@ describe('api client', () => {
   afterEach(() => vi.unstubAllGlobals());
 
   it('returns parsed data on success', async () => {
-    mockFetch(200, { provider: 'fixture', model: 'fixture', modelConfigured: true });
-    await expect(createApiClient().getMeta()).resolves.toEqual({
-      provider: 'fixture',
-      model: 'fixture',
-      modelConfigured: true,
-    });
+    const meta = { provider: 'fixture', model: 'fixture', modelConfigured: true, budget: { capUsd: 5, spentUsd: 0 } };
+    mockFetch(200, meta);
+    await expect(createApiClient().getMeta()).resolves.toEqual(meta);
   });
 
   it('rejects a response that breaks the shared schema', async () => {

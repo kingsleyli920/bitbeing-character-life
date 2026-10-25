@@ -2,10 +2,11 @@ import { metaResponseSchema } from '@cl/shared';
 import { describe, expect, it } from 'vitest';
 import { buildApp } from '../../src/app.js';
 import { loadConfig } from '../../src/config.js';
+import { openDb } from '../../src/db/open.js';
 
 describe('app shell', () => {
   it('answers health checks', async () => {
-    const app = await buildApp({ config: loadConfig({ DB_PATH: ':memory:' }, []) });
+    const app = await buildApp({ db: openDb(':memory:'), config: loadConfig({ DB_PATH: ':memory:' }, []) });
     const res = await app.inject('/api/health');
     expect(res.statusCode).toBe(200);
     expect(res.json()).toEqual({ ok: true });
@@ -13,6 +14,7 @@ describe('app shell', () => {
 
   it('reports the model provider without leaking the key', async () => {
     const app = await buildApp({
+      db: openDb(':memory:'),
       config: loadConfig({ DB_PATH: ':memory:', OPENROUTER_API_KEY: 'sk-or-v1-secret' }, []),
     });
     const res = await app.inject('/api/meta');
@@ -20,12 +22,13 @@ describe('app shell', () => {
       provider: 'openrouter',
       model: 'anthropic/claude-haiku-5.5',
       modelConfigured: true,
+      budget: { capUsd: 5, spentUsd: 0 },
     });
     expect(res.body).not.toContain('secret');
   });
 
   it('marks fixture mode explicitly', async () => {
-    const app = await buildApp({ config: loadConfig({ DB_PATH: ':memory:' }, ['--provider=fixture']) });
+    const app = await buildApp({ db: openDb(':memory:'), config: loadConfig({ DB_PATH: ':memory:' }, ['--provider=fixture']) });
     expect((await app.inject('/api/meta')).json()).toMatchObject({ provider: 'fixture', model: 'fixture' });
   });
 });

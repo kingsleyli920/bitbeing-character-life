@@ -3,7 +3,7 @@ import { render, screen } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';
 import { describe, expect, it } from 'vitest';
 import { App } from '../App';
-import { server } from '../test/msw';
+import { fixtureMeta, server } from '../test/msw';
 
 const client = () => new QueryClient({ defaultOptions: { queries: { retry: false } } });
 
@@ -17,7 +17,7 @@ describe('App shell', () => {
   it('hides the badge for the real model', async () => {
     server.use(
       http.get('/api/meta', () =>
-        HttpResponse.json({ provider: 'openrouter', model: 'anthropic/claude-haiku-5.5', modelConfigured: true }),
+        HttpResponse.json({ ...fixtureMeta, provider: 'openrouter', model: 'anthropic/claude-haiku-5.5' }),
       ),
     );
     render(<App queryClient={client()} />);

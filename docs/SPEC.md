@@ -248,7 +248,8 @@ eval/            L6 真实模型评测脚本、场景、out/（运行产物，�
 ### 4.3 数据模型（SQLite）
 
 ```sql
-characters(id TEXT PK, source TEXT CHECK(source IN ('preset','import')), card_json TEXT, created_at TEXT)
+characters(id TEXT PK, source TEXT CHECK(source IN ('preset','import')), card_json TEXT,
+           sort_key INTEGER NULL /* 预置角色的固定顺序 */, created_at TEXT)
 stories(id TEXT PK, character_id TEXT FK, card_snapshot TEXT, state TEXT NULL,
         version INTEGER DEFAULT 0, chapter_count INTEGER DEFAULT 0,
         active_direction_id TEXT NULL, created_at TEXT, updated_at TEXT)
@@ -289,7 +290,7 @@ model_calls(id TEXT PK, job_id TEXT FK, story_id TEXT, purpose TEXT, attempt INT
 | POST | `/characters/import` | 201 角色 | 400 `VALIDATION` / 413 |
 | GET | `/characters/:id` | 角色 + 故事列表 | 404 |
 | DELETE | `/characters/:id` | 204 | 404 / 403 预置 / 409 有进行中任务 |
-| POST | `/characters/:id/stories` | 201 故事 | 404 |
+| POST | `/characters/:id/stories` `{reuseLatest?}` | 201 新故事 / 200 已有最新故事（`reuseLatest: true`） | 404 |
 | GET | `/stories/:id` | 故事详情：卡片快照、状态、当前走向、章数、`activeJob`、`lastJob` | 404 |
 | GET | `/stories/:id/chapters?from=&limit=` | 章节（含正文），`limit` ≤20 | 400 / 404 |
 | GET | `/stories/:id/toc` | `[{number,title,storyTime}]` | 404 |
@@ -299,7 +300,7 @@ model_calls(id TEXT PK, job_id TEXT FK, story_id TEXT, purpose TEXT, attempt INT
 | POST | `/stories/:id/jobs` `{requestId}` | 202 新任务 / 200 同 requestId 已有任务 | 409 `JOB_IN_PROGRESS` / 404 |
 | GET | `/stories/:id/jobs/:jobId` | 任务（状态、错误码、尝试次数、耗时、token、费用） | 404（含任务不属于该故事） |
 | GET | `/stories/:id/export.md` | Markdown 下载 | 404 |
-| POST | `/__test__/reset` | 仅 `APP_ENV=test`：清库并重新写入预置角色 | 其他环境 404 |
+| POST | `/__test__/reset`（即 `/api/__test__/reset`） | 仅 `APP_ENV=test`：清库并重新写入预置角色 | 其他环境 404 |
 
 错误体统一 `{code, message, issues?, job?}`。
 
