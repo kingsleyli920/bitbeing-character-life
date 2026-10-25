@@ -19,7 +19,7 @@ describe('schema migration', () => {
     v1.close();
 
     const db = openDb(file);
-    expect(db.prepare('PRAGMA user_version').get()).toEqual({ user_version: 3 });
+    expect(db.prepare('PRAGMA user_version').get()).toEqual({ user_version: 4 });
     expect(db.prepare('SELECT profile_status, profile_json FROM characters WHERE id = ?').get('c1')).toEqual({ profile_status: 'none', profile_json: null });
     expect(db.prepare('SELECT profile_snapshot FROM stories WHERE id = ?').get('s1')).toEqual({ profile_snapshot: null });
     expect(db.prepare('SELECT job_id, cost_usd, error_message FROM model_calls WHERE id = ?').get('m1')).toEqual({ job_id: 'j1', cost_usd: 0.01, error_message: null });
@@ -28,10 +28,18 @@ describe('schema migration', () => {
       `INSERT INTO model_calls (id, job_id, story_id, character_id, purpose, attempt, model, prompt_version, started_at, outcome, cost_source, request_json)
        VALUES ('m2', NULL, NULL, 'c1', 'profile', 1, 'm', 'v', 't', 'ok', 'unknown', '{}')`,
     ).run();
+    // v4: consistency checks are recorded like any other call; chapters carry a date and life areas.
+    db.prepare(
+      `INSERT INTO model_calls (id, job_id, story_id, purpose, attempt, model, prompt_version, started_at, outcome, cost_source, request_json)
+       VALUES ('m3', 'j1', 's1', 'consistency', 1, 'm', 'v', 't', 'ok', 'unknown', '{}')`,
+    ).run();
+    const chapterColumns = (db.prepare('PRAGMA table_info(chapters)').all() as { name: string; dflt_value: string | null }[]).map((c) => [c.name, c.dflt_value]);
+    expect(chapterColumns).toEqual(expect.arrayContaining([['story_date', null], ['life_areas', "'[]'"]]));
+    expect(db.prepare('SELECT COUNT(*) AS n FROM model_calls WHERE character_id IS NULL').get()).toEqual({ n: 2 });
     db.close();
     // Opening again is a no-op.
     const again = openDb(file);
-    expect(again.prepare('SELECT COUNT(*) AS n FROM model_calls').get()).toEqual({ n: 2 });
+    expect(again.prepare('SELECT COUNT(*) AS n FROM model_calls').get()).toEqual({ n: 3 });
     again.close();
   });
 });
