@@ -1,0 +1,95 @@
+{
+  "scenario": "long",
+  "description": "林晚连续 101 段：第 25 段起“与母亲正面冲突”，第 50 段起“更多的感情故事”，第 75 段起清除走向；第 60 段生成中强杀服务再继续",
+  "model": "anthropic/claude-haiku-5.5",
+  "finishedAt": "2026-10-25T09:22:22.523Z",
+  "runSeconds": 2172,
+  "stoppedEarly": null,
+  "crashes": {
+    "lin-wan": {
+      "jobId": "c8b38d00-a76c-41dd-8813-f6f5e834cb18",
+      "status": "interrupted",
+      "chaptersBefore": 59,
+      "chaptersAfter": 59,
+      "callsForJob": 0
+    }
+  },
+  "stories": {
+    "lin-wan": {
+      "storyId": "95f9ef1f-a1d2-4b4f-8204-b9ce4f9c0471",
+      "chapters": 101,
+      "bodyChars": {
+        "min": 741,
+        "avg": 1151,
+        "max": 1635
+      },
+      "jobs": {
+        "succeeded": 101,
+        "interrupted": 1
+      },
+      "jobsNeedingRetry": 0,
+      "calls": {
+        "chapter": {
+          "ok": 101
+        },
+        "arc": {
+          "ok": 10
+        }
+      },
+      "latencyMs": {
+        "p50": 19512,
+        "p95": 30312,
+        "max": 33964
+      },
+      "tokens": {
+        "input": 1511333,
+        "output": 333374,
+        "reasoning": 87317
+      },
+      "costUsd": {
+        "total": 0.31782,
+        "reported": 0.31782,
+        "estimated": 0,
+        "unknownCalls": 0
+      },
+      "context": {
+        "maxTokens": 12000,
+        "avgTokens": 11068
+      },
+      "repetition": {
+        "beatTagRepeatRate": 0.139,
+        "duplicateTitles": [
+          "雨停之后的账单"
+        ],
+        "consecutiveSimilarity": {
+          "avg": 0.019,
+          "max": 0.04,
+          "maxAt": 50
+        }
+      },
+      "memory": {
+        "event:active": 66,
+        "person:active": 27,
+        "promise:resolved": 15,
+        "thread:resolved": 23,
+        "promise:open": 1,
+        "trait:active": 1,
+        "thread:open": 7
+      },
+      "traitChanges": 1,
+      "arcSummaries": 10,
+      "directionChapters": 50,
+      "pacing": {
+        "threadsResolved": 38,
+        "threadsOpen": 8,
+        "resolutionRate": 0.83,
+        "oldestOpenThreadAge": 56,
+        "arcsSayingUnresolved": 8,
+        "distinctLocations": 54,
+        "storyDays": 86
+      }
+    }
+  },
+  "branches": {},
+  "totalCostUsd": 0.31782
+}

@@ -1,0 +1,97 @@
+{
+  "scenario": "long",
+  "description": "林晚连续 101 段：第 25 段起“与母亲正面冲突”，第 50 段起“更多的感情故事”，第 75 段起清除走向；第 60 段生成中强杀服务再继续",
+  "model": "anthropic/claude-haiku-5.5",
+  "finishedAt": "2026-10-25T08:44:41.956Z",
+  "runSeconds": 1909,
+  "stoppedEarly": null,
+  "crashes": {
+    "lin-wan": {
+      "jobId": "6993df5e-1770-4ab2-a3b6-248c7c17aa93",
+      "status": "interrupted",
+      "chaptersBefore": 59,
+      "chaptersAfter": 59,
+      "callsForJob": 0
+    }
+  },
+  "stories": {
+    "lin-wan": {
+      "storyId": "b44ff2e7-265c-4300-b542-9141e6d0b737",
+      "chapters": 101,
+      "bodyChars": {
+        "min": 712,
+        "avg": 1019,
+        "max": 1580
+      },
+      "jobs": {
+        "succeeded": 101,
+        "interrupted": 1
+      },
+      "jobsNeedingRetry": 1,
+      "calls": {
+        "chapter": {
+          "ok": 101,
+          "invalid": 1
+        },
+        "arc": {
+          "ok": 10
+        }
+      },
+      "latencyMs": {
+        "p50": 15985,
+        "p95": 25787,
+        "max": 31279
+      },
+      "tokens": {
+        "input": 1567715,
+        "output": 291711,
+        "reasoning": 54586
+      },
+      "costUsd": {
+        "total": 0.30263,
+        "reported": 0.30263,
+        "estimated": 0,
+        "unknownCalls": 0
+      },
+      "context": {
+        "maxTokens": 12000,
+        "avgTokens": 11134
+      },
+      "repetition": {
+        "beatTagRepeatRate": 0.119,
+        "duplicateTitles": [
+          "反面的空白",
+          "周师傅摊前的九点",
+          "门没有关"
+        ],
+        "consecutiveSimilarity": {
+          "avg": 0.019,
+          "max": 0.045,
+          "maxAt": 74
+        }
+      },
+      "memory": {
+        "event:active": 82,
+        "thread:resolved": 31,
+        "promise:resolved": 7,
+        "trait:active": 1,
+        "person:active": 17,
+        "promise:open": 1,
+        "thread:open": 3
+      },
+      "traitChanges": 1,
+      "arcSummaries": 10,
+      "directionChapters": 50,
+      "pacing": {
+        "threadsResolved": 38,
+        "threadsOpen": 4,
+        "resolutionRate": 0.9,
+        "oldestOpenThreadAge": 7,
+        "arcsSayingUnresolved": 7,
+        "distinctLocations": 42
+      }
+    }
+  },
+  "branches": {},
+  "totalCostUsd": 0.30263
+}

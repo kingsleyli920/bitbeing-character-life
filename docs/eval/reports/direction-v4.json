@@ -1,0 +1,547 @@
+{
+  "scenario": "direction",
+  "description": "同一段历史（4 段）分出无走向 / 走向 A / 走向 B 三个分支各写 3 段（走向用作业文档里的示例），比较具体变化",
+  "model": "anthropic/claude-haiku-5.5",
+  "finishedAt": "2026-10-25T08:55:52.214Z",
+  "runSeconds": 581,
+  "stoppedEarly": null,
+  "crashes": {},
+  "stories": {
+    "chen-yifan": {
+      "storyId": "a622fa60-807e-4148-8cdf-e80bebaa23e2",
+      "chapters": 4,
+      "bodyChars": {
+        "min": 1204,
+        "avg": 1370,
+        "max": 1662
+      },
+      "jobs": {
+        "succeeded": 4
+      },
+      "jobsNeedingRetry": 0,
+      "calls": {
+        "chapter": {
+          "ok": 4
+        },
+        "arc": {}
+      },
+      "latencyMs": {
+        "p50": 26098,
+        "p95": 29813,
+        "max": 29813
+      },
+      "tokens": {
+        "input": 30298,
+        "output": 15017,
+        "reasoning": 3554
+      },
+      "costUsd": {
+        "total": 0.01054,
+        "reported": 0.01054,
+        "estimated": 0,
+        "unknownCalls": 0
+      },
+      "context": {
+        "maxTokens": 6655,
+        "avgTokens": 5298
+      },
+      "repetition": {
+        "beatTagRepeatRate": 0,
+        "duplicateTitles": [],
+        "consecutiveSimilarity": {
+          "avg": 0.024,
+          "max": 0.028,
+          "maxAt": 2
+        }
+      },
+      "memory": {
+        "person:active": 6,
+        "promise:open": 1,
+        "event:active": 3,
+        "thread:open": 2,
+        "trait:active": 2
+      },
+      "traitChanges": 0,
+      "arcSummaries": 0,
+      "directionChapters": 0,
+      "pacing": {
+        "threadsResolved": 0,
+        "threadsOpen": 3,
+        "resolutionRate": 0,
+        "oldestOpenThreadAge": 3,
+        "arcsSayingUnresolved": 0,
+        "distinctLocations": 4,
+        "storyDays": 3
+      }
+    },
+    "a-xiu": {
+      "storyId": "4212d543-533a-4a54-893e-95421cb3d6d9",
+      "chapters": 4,
+      "bodyChars": {
+        "min": 919,
+        "avg": 1089,
+        "max": 1358
+      },
+      "jobs": {
+        "succeeded": 4
+      },
+      "jobsNeedingRetry": 0,
+      "calls": {
+        "chapter": {
+          "ok": 4
+        },
+        "arc": {}
+      },
+      "latencyMs": {
+        "p50": 17269,
+        "p95": 18999,
+        "max": 18999
+      },
+      "tokens": {
+        "input": 26933,
+        "output": 9374,
+        "reasoning": 0
+      },
+      "costUsd": {
+        "total": 0.00738,
+        "reported": 0.00738,
+        "estimated": 0,
+        "unknownCalls": 0
+      },
+      "context": {
+        "maxTokens": 5305,
+        "avgTokens": 4464
+      },
+      "repetition": {
+        "beatTagRepeatRate": 0,
+        "duplicateTitles": [],
+        "consecutiveSimilarity": {
+          "avg": 0.015,
+          "max": 0.016,
+          "maxAt": 4
+        }
+      },
+      "memory": {
+        "thread:open": 2,
+        "event:active": 3,
+        "promise:resolved": 1,
+        "person:active": 4
+      },
+      "traitChanges": 0,
+      "arcSummaries": 0,
+      "directionChapters": 0,
+      "pacing": {
+        "threadsResolved": 1,
+        "threadsOpen": 2,
+        "resolutionRate": 0.33,
+        "oldestOpenThreadAge": 3,
+        "arcsSayingUnresolved": 0,
+        "distinctLocations": 4,
+        "storyDays": 2
+      }
+    }
+  },
+  "branches": {
+    "chen-yifan-control": {
+      "storyId": "a622fa60-807e-4148-8cdf-e80bebaa23e2",
+      "chapters": 7,
+      "bodyChars": {
+        "min": 1066,
+        "avg": 1278,
+        "max": 1662
+      },
+      "jobs": {
+        "succeeded": 7
+      },
+      "jobsNeedingRetry": 0,
+      "calls": {
+        "chapter": {
+          "ok": 7
+        },
+        "arc": {}
+      },
+      "latencyMs": {
+        "p50": 24357,
+        "p95": 29813,
+        "max": 29813
+      },
+      "tokens": {
+        "input": 60533,
+        "output": 25909,
+        "reasoning": 6926
+      },
+      "costUsd": {
+        "total": 0.01901,
+        "reported": 0.01901,
+        "estimated": 0,
+        "unknownCalls": 0
+      },
+      "context": {
+        "maxTokens": 7905,
+        "avgTokens": 6179
+      },
+      "repetition": {
+        "beatTagRepeatRate": 0.143,
+        "duplicateTitles": [],
+        "consecutiveSimilarity": {
+          "avg": 0.022,
+          "max": 0.028,
+          "maxAt": 2
+        }
+      },
+      "memory": {
+        "person:active": 7,
+        "promise:open": 2,
+        "event:active": 5,
+        "thread:open": 3,
+        "trait:active": 3
+      },
+      "traitChanges": 1,
+      "arcSummaries": 0,
+      "directionChapters": 0,
+      "pacing": {
+        "threadsResolved": 0,
+        "threadsOpen": 5,
+        "resolutionRate": 0,
+        "oldestOpenThreadAge": 6,
+        "arcsSayingUnresolved": 0,
+        "distinctLocations": 6,
+        "storyDays": 7
+      }
+    },
+    "chen-yifan-tragic": {
+      "storyId": "a622fa60-807e-4148-8cdf-e80bebaa23e2",
+      "chapters": 7,
+      "bodyChars": {
+        "min": 988,
+        "avg": 1256,
+        "max": 1662
+      },
+      "jobs": {
+        "succeeded": 7
+      },
+      "jobsNeedingRetry": 0,
+      "calls": {
+        "chapter": {
+          "ok": 7
+        },
+        "arc": {}
+      },
+      "latencyMs": {
+        "p50": 26098,
+        "p95": 31345,
+        "max": 31345
+      },
+      "tokens": {
+        "input": 61355,
+        "output": 29544,
+        "reasoning": 9986
+      },
+      "costUsd": {
+        "total": 0.02091,
+        "reported": 0.02091,
+        "estimated": 0,
+        "unknownCalls": 0
+      },
+      "context": {
+        "maxTokens": 8049,
+        "avgTokens": 6272
+      },
+      "repetition": {
+        "beatTagRepeatRate": 0,
+        "duplicateTitles": [],
+        "consecutiveSimilarity": {
+          "avg": 0.022,
+          "max": 0.032,
+          "maxAt": 5
+        }
+      },
+      "memory": {
+        "person:active": 8,
+        "promise:open": 1,
+        "event:active": 6,
+        "thread:open": 3,
+        "trait:active": 2
+      },
+      "traitChanges": 0,
+      "arcSummaries": 0,
+      "directionChapters": 3,
+      "pacing": {
+        "threadsResolved": 0,
+        "threadsOpen": 4,
+        "resolutionRate": 0,
+        "oldestOpenThreadAge": 6,
+        "arcsSayingUnresolved": 0,
+        "distinctLocations": 6,
+        "storyDays": 10
+      }
+    },
+    "chen-yifan-romance": {
+      "storyId": "a622fa60-807e-4148-8cdf-e80bebaa23e2",
+      "chapters": 7,
+      "bodyChars": {
+        "min": 1070,
+        "avg": 1277,
+        "max": 1662
+      },
+      "jobs": {
+        "succeeded": 7
+      },
+      "jobsNeedingRetry": 0,
+      "calls": {
+        "chapter": {
+          "ok": 7
+        },
+        "arc": {}
+      },
+      "latencyMs": {
+        "p50": 25931,
+        "p95": 29813,
+        "max": 29813
+      },
+      "tokens": {
+        "input": 60808,
+        "output": 24130,
+        "reasoning": 5098
+      },
+      "costUsd": {
+        "total": 0.01815,
+        "reported": 0.01815,
+        "estimated": 0,
+        "unknownCalls": 0
+      },
+      "context": {
+        "maxTokens": 7880,
+        "avgTokens": 6216
+      },
+      "repetition": {
+        "beatTagRepeatRate": 0,
+        "duplicateTitles": [],
+        "consecutiveSimilarity": {
+          "avg": 0.024,
+          "max": 0.029,
+          "maxAt": 5
+        }
+      },
+      "memory": {
+        "person:active": 8,
+        "promise:open": 2,
+        "event:active": 4,
+        "thread:open": 3,
+        "trait:active": 2
+      },
+      "traitChanges": 0,
+      "arcSummaries": 0,
+      "directionChapters": 3,
+      "pacing": {
+        "threadsResolved": 0,
+        "threadsOpen": 5,
+        "resolutionRate": 0,
+        "oldestOpenThreadAge": 6,
+        "arcsSayingUnresolved": 0,
+        "distinctLocations": 6,
+        "storyDays": 7
+      }
+    },
+    "a-xiu-control": {
+      "storyId": "4212d543-533a-4a54-893e-95421cb3d6d9",
+      "chapters": 7,
+      "bodyChars": {
+        "min": 919,
+        "avg": 1158,
+        "max": 1358
+      },
+      "jobs": {
+        "succeeded": 7
+      },
+      "jobsNeedingRetry": 0,
+      "calls": {
+        "chapter": {
+          "ok": 7
+        },
+        "arc": {}
+      },
+      "latencyMs": {
+        "p50": 17016,
+        "p95": 26811,
+        "max": 26811
+      },
+      "tokens": {
+        "input": 52626,
+        "output": 18413,
+        "reasoning": 1389
+      },
+      "costUsd": {
+        "total": 0.01447,
+        "reported": 0.01447,
+        "estimated": 0,
+        "unknownCalls": 0
+      },
+      "context": {
+        "maxTokens": 6318,
+        "avgTokens": 5097
+      },
+      "repetition": {
+        "beatTagRepeatRate": 0.286,
+        "duplicateTitles": [],
+        "consecutiveSimilarity": {
+          "avg": 0.017,
+          "max": 0.02,
+          "maxAt": 7
+        }
+      },
+      "memory": {
+        "thread:resolved": 1,
+        "person:active": 5,
+        "event:active": 5,
+        "thread:open": 2,
+        "promise:resolved": 1
+      },
+      "traitChanges": 0,
+      "arcSummaries": 0,
+      "directionChapters": 0,
+      "pacing": {
+        "threadsResolved": 2,
+        "threadsOpen": 2,
+        "resolutionRate": 0.5,
+        "oldestOpenThreadAge": 6,
+        "arcsSayingUnresolved": 0,
+        "distinctLocations": 6,
+        "storyDays": 4
+      }
+    },
+    "a-xiu-adventure": {
+      "storyId": "4212d543-533a-4a54-893e-95421cb3d6d9",
+      "chapters": 7,
+      "bodyChars": {
+        "min": 919,
+        "avg": 1125,
+        "max": 1358
+      },
+      "jobs": {
+        "succeeded": 7
+      },
+      "jobsNeedingRetry": 0,
+      "calls": {
+        "chapter": {
+          "ok": 7
+        },
+        "arc": {}
+      },
+      "latencyMs": {
+        "p50": 17269,
+        "p95": 23927,
+        "max": 23927
+      },
+      "tokens": {
+        "input": 52748,
+        "output": 18122,
+        "reasoning": 999
+      },
+      "costUsd": {
+        "total": 0.01434,
+        "reported": 0.01434,
+        "estimated": 0,
+        "unknownCalls": 0
+      },
+      "context": {
+        "maxTokens": 6341,
+        "avgTokens": 5110
+      },
+      "repetition": {
+        "beatTagRepeatRate": 0,
+        "duplicateTitles": [],
+        "consecutiveSimilarity": {
+          "avg": 0.017,
+          "max": 0.026,
+          "maxAt": 6
+        }
+      },
+      "memory": {
+        "event:active": 6,
+        "thread:open": 2,
+        "person:active": 7,
+        "promise:resolved": 2
+      },
+      "traitChanges": 0,
+      "arcSummaries": 0,
+      "directionChapters": 3,
+      "pacing": {
+        "threadsResolved": 2,
+        "threadsOpen": 2,
+        "resolutionRate": 0.5,
+        "oldestOpenThreadAge": 6,
+        "arcsSayingUnresolved": 0,
+        "distinctLocations": 5,
+        "storyDays": 5
+      }
+    },
+    "a-xiu-philosophy": {
+      "storyId": "4212d543-533a-4a54-893e-95421cb3d6d9",
+      "chapters": 7,
+      "bodyChars": {
+        "min": 919,
+        "avg": 1098,
+        "max": 1358
+      },
+      "jobs": {
+        "succeeded": 7
+      },
+      "jobsNeedingRetry": 0,
+      "calls": {
+        "chapter": {
+          "ok": 7
+        },
+        "arc": {}
+      },
+      "latencyMs": {
+        "p50": 18999,
+        "p95": 29706,
+        "max": 29706
+      },
+      "tokens": {
+        "input": 52632,
+        "output": 21741,
+        "reasoning": 4595
+      },
+      "costUsd": {
+        "total": 0.01613,
+        "reported": 0.01613,
+        "estimated": 0,
+        "unknownCalls": 0
+      },
+      "context": {
+        "maxTokens": 6248,
+        "avgTokens": 5098
+      },
+      "repetition": {
+        "beatTagRepeatRate": 0,
+        "duplicateTitles": [],
+        "consecutiveSimilarity": {
+          "avg": 0.018,
+          "max": 0.023,
+          "maxAt": 7
+        }
+      },
+      "memory": {
+        "thread:open": 3,
+        "person:active": 6,
+        "event:active": 6,
+        "promise:resolved": 1
+      },
+      "traitChanges": 0,
+      "arcSummaries": 0,
+      "directionChapters": 3,
+      "pacing": {
+        "threadsResolved": 1,
+        "threadsOpen": 3,
+        "resolutionRate": 0.25,
+        "oldestOpenThreadAge": 6,
+        "arcsSayingUnresolved": 0,
+        "distinctLocations": 7,
+        "storyDays": 7
+      }
+    }
+  },
+  "totalCostUsd": 0.06717
+}

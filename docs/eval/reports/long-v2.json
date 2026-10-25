@@ -1,0 +1,88 @@
+{
+  "scenario": "long",
+  "description": "林晚连续 101 段：第 25 段起“与母亲正面冲突”，第 50 段起“更多的感情故事”，第 75 段起清除走向；第 60 段生成中强杀服务再继续",
+  "model": "anthropic/claude-haiku-5.5",
+  "finishedAt": "2026-10-25T08:10:23.536Z",
+  "runSeconds": 1739,
+  "stoppedEarly": null,
+  "crashes": {
+    "lin-wan": {
+      "jobId": "b5f45094-788f-4e7f-9b1f-c42e2b435588",
+      "status": "interrupted",
+      "chaptersBefore": 59,
+      "chaptersAfter": 59,
+      "callsForJob": 0
+    }
+  },
+  "stories": {
+    "lin-wan": {
+      "storyId": "4a99c0e9-2e4b-4c17-8f89-fededd0b58c8",
+      "chapters": 101,
+      "bodyChars": {
+        "min": 744,
+        "avg": 1041,
+        "max": 1608
+      },
+      "jobs": {
+        "succeeded": 101,
+        "interrupted": 1
+      },
+      "jobsNeedingRetry": 0,
+      "calls": {
+        "chapter": {
+          "ok": 101
+        },
+        "arc": {
+          "invalid": 4,
+          "ok": 10
+        }
+      },
+      "latencyMs": {
+        "p50": 15070,
+        "p95": 23786,
+        "max": 30824
+      },
+      "tokens": {
+        "input": 1530760,
+        "output": 260536,
+        "reasoning": 27679
+      },
+      "costUsd": {
+        "total": 0.28334,
+        "reported": 0.28334,
+        "estimated": 0,
+        "unknownCalls": 0
+      },
+      "context": {
+        "maxTokens": 12000,
+        "avgTokens": 10979
+      },
+      "repetition": {
+        "beatTagRepeatRate": 0.099,
+        "duplicateTitles": [
+          "东北街的早晨",
+          "门开之后"
+        ],
+        "consecutiveSimilarity": {
+          "avg": 0.02,
+          "max": 0.046,
+          "maxAt": 76
+        }
+      },
+      "memory": {
+        "thread:open": 31,
+        "event:active": 62,
+        "thread:resolved": 9,
+        "person:active": 20,
+        "promise:resolved": 5,
+        "promise:open": 6,
+        "trait:active": 1
+      },
+      "traitChanges": 0,
+      "arcSummaries": 10,
+      "directionChapters": 50
+    }
+  },
+  "branches": {},
+  "totalCostUsd": 0.28334
+}
