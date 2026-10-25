@@ -238,7 +238,7 @@ POST /jobs ─► queued ─► running ─► succeeded
 | 前端 | `react` 19.3.0，`react-router` 8.4.0，`@tanstack/react-query` 5.104.1，`vite` 8.3.4 |
 | 模型 | OpenRouter Chat Completions（`fetch`，无 SDK）；默认 `anthropic/claude-haiku-5.5`，备选 `deepseek/deepseek-v4-pro`；请求带 `response_format: json_schema(strict)` 与 `provider.require_parameters: true` |
 | 测试 | `vitest` 5.0.3，`@testing-library/*`，`msw` 3.0.2，`jsdom` 30.1.2，`@playwright/test` 1.64.0 |
-| 工具 | `typescript` 7.0.2，`tsx` 4.23.15，`concurrently` 10.0.6 |
+| 工具 | `typescript` 7.0.2，`tsx` 4.23.15，`concurrently` 10.0.6，`marked` 18.1.0（仅用于把文档生成 PDF：`npm run docs:pdf`） |
 
 新增依赖须写入此表。引入数据库服务或大型框架需先与负责人确认。
 

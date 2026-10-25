@@ -34,12 +34,14 @@
     "test:fe": "vitest run --project fe-unit --project fe-ft && npm run test:e2e:web",
     "test:fast": "vitest run",
     "test:all": "npm run typecheck && vitest run && playwright test",
-    "eval": "tsx eval/run.ts"
+    "eval": "tsx eval/run.ts",
+    "docs:pdf": "tsx scripts/build-pdf.ts docs/ARCHITECTURE.md"
   },
   "devDependencies": {
     "@playwright/test": "1.64.0",
     "@types/node": "24.19.2",
     "concurrently": "10.0.6",
+    "marked": "18.1.0",
     "tsx": "4.23.15",
     "typescript": "7.0.2",
     "vite": "8.3.4",

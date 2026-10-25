@@ -99,7 +99,7 @@ web (React + Vite)  ──HTTP──>  server (Fastify)  ──>  SQLite (node:s
   - `memory-apply`：记忆合并；
   - `arc-summary`：卷摘要。
   - 模型接入在 `model/`（OpenRouter + fixture）。
-- `web/`：书架、阅读页、导入和走向对话框；react-query 负责请求与轮询。
+- `web/`：单页工作台（左「角色卡信息」、右「角色生活故事」）、导入对话框、走向弹出框；react-query 负责请求与轮询。
 - 一次生成 = 一次模型调用，返回 JSON：正文、摘要、状态、记忆增删、性格变化、走向说明。服务端校验通过后，在**一个事务**里写入全部内容。
 
 上下文与记忆的设计、可靠性规则详见 [SPEC §2–§3](docs/SPEC.md#2-故事生成与记忆)，设计取舍见 [docs/INTERVIEW.md](docs/INTERVIEW.md)。

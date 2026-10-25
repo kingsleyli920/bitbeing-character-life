@@ -20,28 +20,26 @@
 ### 0.2 总体架构
 
 ```
-┌──────────────────────── 浏览器（React + Vite）────────────────────────┐
-│  左栏「角色卡信息」               右栏「角色生活故事」                      │
-│  导入 / 切换角色 / 补全设定 / 记忆   故事走向 / 生活故事序列 / 点击继续生成   │
-│            │  react-query：请求、缓存、1.5 秒轮询任务状态                    │
-└────────────┼──────────────────────────────────────────────────────────┘
-             │ HTTP JSON（请求与响应都用 shared 里的 zod schema 校验）
-┌────────────▼──────────── 服务端（Node 24 + Fastify）──────────────────┐
-│ routes ── 参数校验、错误映射（不含业务逻辑）                                │
-│ services                                                              │
-│   GenerationService  生成任务：幂等、单故事锁、重试、截止时间、事务提交       │
-│   context-builder    上下文组装：按预算挑选记忆                             │
-│   memory-apply       记忆写入：upsert / resolve / 来源章节                 │
-│   arc-summary        每 10 段一次的卷摘要                                  │
-│   ProfileService     角色卡补全（[原文] / [推理] / [想象]）                 │
-│ model                OpenRouter 适配器 · 确定性 fixture 模型                │
-│ repos                SQL（所有故事数据都带 story_id 条件）                   │
-└────────────┬───────────────────────────────────┬──────────────────────┘
-             │                                   │ HTTPS，结构化 JSON 输出
-     ┌───────▼────────┐                 ┌────────▼─────────┐
-     │ SQLite（单文件） │                 │ OpenRouter        │
-     │ node:sqlite     │                 │ Claude Haiku 5.5  │
-     └────────────────┘                 └──────────────────┘
+浏览器（React + Vite）
+│  左栏「角色卡信息」：导入 / 切换角色 / 补全设定 / 记忆
+│  右栏「角色生活故事」：故事走向 / 生活故事序列 / 点击继续生成
+│  react-query：请求、缓存、每 1.5 秒轮询任务状态
+│
+│  HTTP + JSON（请求和响应都用 shared/ 里的 zod schema 校验）
+▼
+服务端（Node 24 + Fastify）
+├─ routes            参数校验、错误映射（不写业务逻辑）
+├─ services
+│  ├─ GenerationService   生成任务：幂等、单故事锁、重试、截止时间、事务提交
+│  ├─ context-builder     上下文组装：在 token 预算内挑选记忆
+│  ├─ memory-apply        记忆写入：upsert / resolve / 来源段落
+│  ├─ arc-summary         每 10 段一次卷摘要
+│  └─ ProfileService      角色卡补全（[原文] / [推理] / [想象]）
+├─ model             OpenRouter 适配器、确定性 fixture 模型
+└─ repos             SQL（故事数据一律带 story_id 条件）
+   │                          │
+   ▼                          ▼
+SQLite（node:sqlite，单文件）   OpenRouter → Claude Haiku 5.5（结构化 JSON 输出）
 ```
 
 ### 0.3 技术选型
@@ -80,33 +78,17 @@
 
 ### 1.2 一次生成的完整流程
 
-```mermaid
-sequenceDiagram
-  participant UI as 浏览器
-  participant API as routes/stories
-  participant G as GenerationService
-  participant DB as SQLite
-  participant M as Claude Haiku 5.5
-
-  UI->>API: POST /stories/:id/jobs {requestId}
-  API->>G: createJob
-  G->>DB: INSERT job（UNIQUE requestId；每个故事只能有一个进行中任务）
-  G->>DB: 第 1 段之前：把补全设定冻结进故事
-  API-->>UI: 202 {job}（同一 requestId 重复请求返回 200 + 同一任务；其他进行中任务返回 409）
-  G->>DB: status = running
-  opt 第 10k+1 段
-    G->>M: 卷摘要（单次尝试，失败不阻塞）
-  end
-  G->>DB: 读取状态、记忆、摘要、上一段原文
-  G->>G: assembleContext（≤ 12k token）
-  loop 最多 3 次，单次 90 秒，整体 180 秒
-    G->>M: json_schema(strict) 请求
-    M-->>G: JSON
-    G->>G: zod 校验 + 语义校验（失败则退避后重试）
-  end
-  G->>DB: 单事务：检查版本 → 写段落、状态、记忆、性格变化、走向说明，version + 1
-  UI->>API: 每 1.5 秒 GET /stories/:id（看到 lastJob = succeeded 后加载新段落）
-```
+| 步骤 | 谁 | 做什么 |
+|---|---|---|
+| 1 | 浏览器 | 点击「点击继续生成」，生成一个 `requestId`，`POST /api/stories/:id/jobs` |
+| 2 | GenerationService | `INSERT` 任务：`UNIQUE(story_id, request_id)` 保证同一请求只建一个任务；部分唯一索引保证每个故事只有一个进行中的任务。写第 1 段之前，把补全设定冻结进故事 |
+| 3 | 接口 | 返回 202 和任务。同一 requestId 重复请求返回 200 和同一个任务；已有其他任务在进行时返回 409，并附上那个任务 |
+| 4 | GenerationService | 把任务标为 `running`；如果要写第 10k+1 段，先生成卷摘要（单次尝试，失败不阻塞） |
+| 5 | context-loader / builder | 从数据库读取状态、记忆、摘要、上一段原文，在 12k token 预算内组装上下文（§4.3） |
+| 6 | 模型 | `json_schema(strict)` 请求 → 返回 `ChapterDraft` JSON |
+| 7 | draft-validation | zod 校验 + 语义校验；不通过就退避后重试：最多 3 次，单次 90 秒，整体 180 秒 |
+| 8 | commit（单事务） | 确认任务仍在运行、故事版本没变、段号连续 → 写入段落、状态、记忆、性格变化、走向说明，`version + 1`，任务标为成功 |
+| 9 | 浏览器 | 每 1.5 秒轮询故事；看到 `lastJob = succeeded` 后加载新段落并滚动过去 |
 
 ### 1.3 Prompt 设计（`server/src/prompts/chapter.ts`，当前版本 `chapter-v2`）
 
@@ -278,17 +260,7 @@ POST ─► queued ─► running ─► succeeded
 
 ### 3.1 页面结构（按作业文档的参考交互）
 
-```
-┌ 角色卡信息 ──────── [导入角色] ┐ ┌ 角色生活故事  走向:更悲惨一点 [故事走向][更多] ┐
-│ [林晚][周野][宋知微][陈一帆]…  │ │ ┌ 生活故事序列 1 · 雨季的第一单 ─────────┐ │
-│ - 名字：周野                  │ │ │ 正文……                              │ │
-│ - 经济状态：……  [推理]        │ │ │ ▸ 本段走向：……（展开看模型如何落实）    │ │
-│ - 标志性特征：…… [想象]       │ │ └────────────────────────────────────┘ │
-│ - 背景 / 性格 / 人际关系 …     │ │ ┌ 生活故事序列 2 ……                    ┐ │
-│ ▸ 记忆（人物、线索、事件……）    │ │                                        │
-└───────────────────────────────┘ │            [ 点击继续生成 ]              │
-                                    └────────────────────────────────────────┘
-```
+![工作台：左「角色卡信息」，右「角色生活故事」](images/workspace.png)
 
 - 只有一个页面。`/` 会打开上次读的角色（浏览器本地记录），没有记录就打开第一个预置角色；`/characters/:id` 跳到这个角色最新的故事；`/stories/:id` 是工作台本身。
 - 「故事走向」是锚定在按钮下方的便签式弹出框，提示语和前四个示例来自文档：“更悲惨一点”“故事更有冒险性一点”“故事更有哲理一点”“更多的感情故事”。
