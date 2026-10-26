@@ -44,7 +44,7 @@ npm run dev             # 打开 http://127.0.0.1:5210
 |---|---|---|
 | `OPENROUTER_API_KEY` | — | 必填（真实模型）。不会发给前端，也不会写进日志 |
 | `STORY_MODEL` | `anthropic/claude-haiku-5.5` | 也可用 `deepseek/deepseek-v4-pro` |
-| `BUDGET_USD_CAP` | `5` | 本地累计费用上限（美元），达到后不再调用模型 |
+| `BUDGET_USD_CAP` | `10` | 本地累计费用上限（美元），达到后不再调用模型 |
 | `CONSISTENCY_CHECK` | `on` | 每段保存前用模型检查一次前后矛盾（每段多一次低价调用，约多 5–8 秒）；`off` 关闭 |
 | `PORT` / `WEB_PORT` / `DB_PATH` | 3210 / 5210 / `data/dev.db` | 同时跑多份时改成不同的值 |
 

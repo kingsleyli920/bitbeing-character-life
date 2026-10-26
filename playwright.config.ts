@@ -35,6 +35,8 @@ export default defineConfig({
       env: {
         PORT: String(port),
         APP_ENV: 'test',
+        // Pinned so the header text in the visual baselines does not follow the default.
+        BUDGET_USD_CAP: '5',
         DB_PATH: `test-results/e2e-${port}.db`,
         // Fixture model latency; raise it (e.g. 1500) to watch progress when recording a demo.
         FIXTURE_DELAY_MS: process.env.FIXTURE_DELAY_MS ?? '300',

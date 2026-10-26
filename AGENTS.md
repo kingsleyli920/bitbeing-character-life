@@ -52,7 +52,7 @@ source ~/.nvm/nvm.sh && nvm use 24 >/dev/null   # 系统默认 Node 是 v26；�
 
 - Conventional Commits：`feat(server): …`、`test(shared): …`、`fix(web): …`、`docs: …`、`chore: …`。
 - 一个提交一个逻辑变化，尽量 ≲300 行（锁文件、截图除外）。按层拆分：schema → 仓储/服务 → 路由 → UI。
-- 里程碑在 `m<N>-<topic>` 分支开发，主 Agent 验证后合并到 `main` 并推送到私有远端。
+- 里程碑在 `m<N>-<topic>` 分支开发，主 Agent 验证后合并到 `main` 并推送到远端。
 
 ## Skills
 

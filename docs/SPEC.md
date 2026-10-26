@@ -358,7 +358,7 @@ model_calls(id TEXT PK, job_id TEXT NULL, story_id TEXT NULL, character_id TEXT 
 | `MODEL_PROVIDER` | `openrouter` | `fixture` 为确定性假模型（页面显示「Fixture 模式」） |
 | `OPENROUTER_API_KEY` | — | 只在服务端 |
 | `STORY_MODEL` | `anthropic/claude-haiku-5.5` | |
-| `BUDGET_USD_CAP` | `5` | |
+| `BUDGET_USD_CAP` | `10` | |
 | `CONTEXT_BUDGET_TOKENS` | `12000` | |
 | `MODEL_ATTEMPT_TIMEOUT_MS` / `JOB_DEADLINE_MS` / `MODEL_MAX_ATTEMPTS` | 90000 / 180000 / 3 | |
 | `JOB_CONCURRENCY` | 2 | |
@@ -426,4 +426,4 @@ typecheck → L1 → L3/L4 全过后才跑 Playwright（L2 → L5）。后端改
 2. 主流程：选角色 → 开场 → 续写 → 调整走向 → 刷新/重启 → 继续，全部用真实模型跑通。
 3. `npm run test:all` 全部通过，结果（命令、耗时、提交号）记录在 README。
 4. L6：5 个角色各至少 8 章；至少 1 个角色连续 101 章；至少 2 组走向 A/B 对比；1 次重启后续写。结论引用具体章节，写在 `docs/EVALUATION.md`。
-5. 真实模型累计花费 ≤ $5。
+5. 真实模型累计花费 ≤ $10（2026-10-25 由 $5 上调）。

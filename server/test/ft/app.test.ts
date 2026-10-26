@@ -22,7 +22,7 @@ describe('app shell', () => {
       provider: 'openrouter',
       model: 'anthropic/claude-haiku-5.5',
       modelConfigured: true,
-      budget: { capUsd: 5, spentUsd: 0 },
+      budget: { capUsd: 10, spentUsd: 0 },
     });
     expect(res.body).not.toContain('secret');
   });

@@ -10,7 +10,7 @@ describe('loadConfig', () => {
       port: 3210,
       provider: 'openrouter',
       storyModel: 'anthropic/claude-haiku-5.5',
-      budgetUsdCap: 5,
+      budgetUsdCap: 10,
       contextBudgetTokens: 12000,
       attemptTimeoutMs: 90_000,
       jobDeadlineMs: 180_000,

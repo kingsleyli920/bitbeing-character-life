@@ -37,7 +37,7 @@ const envSchema = z.object({
   MODEL_PROVIDER: z.enum(['openrouter', 'fixture']).default('openrouter'),
   OPENROUTER_API_KEY: z.string().optional(),
   STORY_MODEL: z.string().min(1).default('anthropic/claude-haiku-5.5'),
-  BUDGET_USD_CAP: z.coerce.number().positive().default(5),
+  BUDGET_USD_CAP: z.coerce.number().positive().default(10),
   CONTEXT_BUDGET_TOKENS: int(2000).default(12000),
   MODEL_ATTEMPT_TIMEOUT_MS: int(1).default(90_000),
   JOB_DEADLINE_MS: int(1).default(180_000),
