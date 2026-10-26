@@ -68,10 +68,10 @@ npm run test:fast            # Vitest：后端单元/功能/E2E、契约、前�
 npx playwright install chromium
 npx playwright test          # 前端 E2E（mock 后端）、全栈 E2E、视觉回归
 npm run test:all             # 以上全部（密钥扫描 → typecheck → Vitest → Playwright）
-npm run check:secrets        # 单独扫描：已跟踪/暂存的文件里有没有 API key
+npm run check:secrets        # 单独扫描：已跟踪/暂存的文件里有没有 API key 或本机路径
 ```
 
-API key 只放在 `.env.local`（已被 `.gitignore` 忽略）。`npm run check:secrets` 会扫描所有提交的文件（包括 `demo/demo.db`、PDF 这类二进制文件）；执行一次 `git config core.hooksPath .githooks` 后，每次 commit 前都会自动扫描，发现 key 就拒绝提交。
+API key 只放在 `.env.local`（已被 `.gitignore` 忽略）。`npm run check:secrets` 会扫描所有提交的文件（包括 `demo/demo.db`、PDF 这类二进制文件），同时检查有没有本机用户目录路径；执行一次 `git config core.hooksPath .githooks` 后，每次 commit 前都会自动扫描，发现 key 就拒绝提交。
 
 | 层 | 脚本 | 内容 |
 |---|---|---|

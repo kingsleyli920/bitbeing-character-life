@@ -53,8 +53,23 @@ hr { border: none; border-top: 1px solid #e3d8c6; margin: 14pt 0; }
 .meta { color: #8c8079; font-size: 9pt; margin-bottom: 14pt; }
 `;
 
+// Links to other repo files point at GitHub, so the PDF carries no local paths.
+const REPO_URL = 'https://github.com/kingsleyli920/bitbeing-character-life/blob/main/';
+let repoRoot = path.dirname(input);
+try {
+  repoRoot = execSync('git rev-parse --show-toplevel', { cwd: path.dirname(input) }).toString().trim();
+} catch {
+  // not a git checkout
+}
+
 // Images become figures with their alt text as the caption.
 marked.use({
+  walkTokens(token) {
+    if (token.type !== 'link' || /^([a-z]+:|#)/i.test(token.href)) return;
+    const [file, hash] = token.href.split('#');
+    const rel = path.relative(repoRoot, path.resolve(path.dirname(input), file)).split(path.sep).join('/');
+    token.href = REPO_URL + rel + (hash ? `#${hash}` : '');
+  },
   renderer: {
     image({ href, text }) {
       return `<figure><img src="${href}" alt="${text}"><figcaption>${text}</figcaption></figure>`;
