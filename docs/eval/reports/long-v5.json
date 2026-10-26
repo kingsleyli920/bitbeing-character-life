@@ -1,0 +1,129 @@
+{
+  "scenario": "long",
+  "description": "林晚连续 101 段：第 25 段起“与母亲正面冲突”，第 50 段起“更多的感情故事”，第 75 段起清除走向；第 60 段生成中强杀服务再继续",
+  "model": "anthropic/claude-haiku-5.5",
+  "finishedAt": "2026-10-25T22:30:22.720Z",
+  "runSeconds": 3922,
+  "stoppedEarly": null,
+  "crashes": {
+    "lin-wan": {
+      "jobId": "dae29499-dac2-4912-b835-8fa35dc27fc1",
+      "status": "interrupted",
+      "chaptersBefore": 59,
+      "chaptersAfter": 59,
+      "callsForJob": 0
+    }
+  },
+  "stories": {
+    "lin-wan": {
+      "storyId": "d8b7d3d6-265b-4960-8791-cceb88f04cb5",
+      "chapters": 101,
+      "bodyChars": {
+        "min": 703,
+        "avg": 1043,
+        "max": 1634
+      },
+      "jobs": {
+        "succeeded": 101,
+        "interrupted": 1
+      },
+      "jobsNeedingRetry": 27,
+      "calls": {
+        "chapter": {
+          "ok": 101,
+          "invalid": 32
+        },
+        "arc": {
+          "ok": 10
+        },
+        "consistency": {
+          "ok": 126,
+          "invalid": 1,
+          "error": 4
+        }
+      },
+      "latencyMs": {
+        "p50": 20838,
+        "p95": 31111,
+        "max": 38403
+      },
+      "tokens": {
+        "input": 3855740,
+        "output": 627611,
+        "reasoning": 302738
+      },
+      "costUsd": {
+        "total": 0.69938,
+        "reported": 0.69938,
+        "estimated": 0,
+        "unknownCalls": 0
+      },
+      "context": {
+        "maxTokens": 12000,
+        "avgTokens": 11255
+      },
+      "repetition": {
+        "beatTagRepeatRate": 0.05,
+        "duplicateTitles": [],
+        "consecutiveSimilarity": {
+          "avg": 0.018,
+          "max": 0.042,
+          "maxAt": 86
+        }
+      },
+      "memory": {
+        "thread:resolved": 21,
+        "promise:resolved": 23,
+        "event:active": 68,
+        "person:active": 20,
+        "thread:open": 3,
+        "trait:active": 2,
+        "promise:open": 2
+      },
+      "traitChanges": 1,
+      "arcSummaries": 10,
+      "directionChapters": 50,
+      "pacing": {
+        "threadsResolved": 44,
+        "threadsOpen": 5,
+        "resolutionRate": 0.9,
+        "oldestOpenThreadAge": 24,
+        "arcsSayingUnresolved": 7,
+        "distinctLocations": 35,
+        "storyDays": 297
+      },
+      "calendar": {
+        "firstDate": "2024-06-12",
+        "lastDate": "2025-04-05",
+        "spanDays": 298,
+        "jumpsOver7Days": 15,
+        "maxJumpDays": 21,
+        "weekdayMismatches": 0
+      },
+      "lifeAreas": {
+        "main": {
+          "工作学业": 3,
+          "兴趣爱好": 7,
+          "钱": 16,
+          "旧事秘密": 27,
+          "感情": 17,
+          "家人": 21,
+          "朋友": 2,
+          "邻里社区": 3,
+          "身体": 2,
+          "居所日常": 3
+        },
+        "topShare": 0.27,
+        "maxWindowShare": 0.8
+      },
+      "consistency": {
+        "rewrites": 30,
+        "hardIssuesFound": 34,
+        "softWarnings": 87,
+        "savedWithHardIssues": 1
+      }
+    }
+  },
+  "branches": {},
+  "totalCostUsd": 0.69938
+}

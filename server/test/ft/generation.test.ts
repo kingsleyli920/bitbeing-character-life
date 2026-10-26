@@ -12,7 +12,7 @@ import { buildApp } from '../../src/app.js';
 import { loadConfig } from '../../src/config.js';
 import { countModelCalls } from '../../src/repos/model-calls.js';
 import { createTestApp, json, type TestApp } from '../helpers/app.js';
-import { ScriptedProvider } from '../helpers/scripted-provider.js';
+import { areaReport, checkReport, ScriptedProvider } from '../helpers/scripted-provider.js';
 
 let t: TestApp | undefined;
 afterEach(async () => {
@@ -54,13 +54,14 @@ describe('generation happy path', () => {
     const c = await setup();
     const res = await postJob(c);
     expect(res.status).toBe(202);
-    expect(res.body.job).toMatchObject({ targetChapter: 1, promptVersion: 'chapter-v4' });
+    expect(res.body.job).toMatchObject({ targetChapter: 1, promptVersion: 'chapter-v6' });
     expect(['queued', 'running']).toContain(res.body.job.status);
     await idle(c);
 
     const job = await getJob(c, res.body.job.id);
     expect(job).toMatchObject({ status: 'succeeded', attempts: 1, errorCode: null });
-    expect(job.usage).toMatchObject({ inputTokens: 1000, outputTokens: 500, costUsd: 0.001, costSource: 'reported' });
+    // Usage covers the chapter call and its consistency check.
+    expect(job.usage).toMatchObject({ inputTokens: 2000, outputTokens: 1000, costUsd: 0.001, costSource: 'reported' });
     const s = await story(c);
     expect(s).toMatchObject({ chapterCount: 1, version: 1, activeJob: null, lastJob: { id: job.id } });
     expect(s.state?.situation).toBe('主唱退出，专场面临取消');
@@ -224,7 +225,7 @@ describe('retries (T5)', () => {
     const res = await postJob(c);
     await idle(c);
     expect(await getJob(c, res.body.job.id)).toMatchObject({ status: 'succeeded', attempts: 2 });
-    expect(c.db.prepare(`SELECT outcome FROM model_calls WHERE job_id = ? ORDER BY attempt`).all(res.body.job.id)).toEqual([
+    expect(c.db.prepare(`SELECT outcome FROM model_calls WHERE job_id = ? AND purpose = 'chapter' ORDER BY attempt`).all(res.body.job.id)).toEqual([
       { outcome: 'invalid' },
       { outcome: 'ok' },
     ]);
@@ -366,6 +367,148 @@ describe('atomic commit (T8)', () => {
   });
 });
 
+describe('story calendar and validation feedback (SPEC §2.5)', () => {
+  it('stores the date, derived days and life areas, and returns them to the reader', async () => {
+    const c = await setup();
+    c.provider.push({ kind: 'draft', draft: { storyDate: '2026-10-10', storyTime: '周六傍晚' } }, { kind: 'draft', draft: { storyDate: '2026-10-24', storyTime: '傍晚', lifeAreas: ['朋友'] } });
+    for (let i = 0; i < 2; i++) {
+      await postJob(c);
+      await idle(c);
+    }
+    expect((await chapters(c)).chapters.map((ch) => [ch.storyDate, ch.lifeAreas])).toEqual([
+      ['2026-10-10', ['工作学业', '钱']],
+      ['2026-10-24', ['朋友']],
+    ]);
+    expect(c.db.prepare('SELECT days_since_previous AS d FROM chapters WHERE story_id = ? ORDER BY number').all(c.storyId)).toEqual([{ d: 0 }, { d: 14 }]);
+    expect(c.provider.calls[1]!.user).toContain('上一章开始于 2026年10月10日 星期六（故事第 1 天）');
+    const toc = tocResponseSchema.parse((await json(c.app, 'GET', `/api/stories/${c.storyId}/toc`)).body);
+    expect(toc.items.map((i) => i.storyDate)).toEqual(['2026-10-10', '2026-10-24']);
+  });
+
+  it('tells the next attempt why the previous output was rejected', async () => {
+    const c = await setup();
+    c.provider.push({ kind: 'draft', draft: { storyTime: '周二夜里' } });
+    const res = await postJob(c);
+    await idle(c);
+    expect(await getJob(c, res.body.job.id)).toMatchObject({ status: 'succeeded', attempts: 2 });
+    expect(c.provider.calls[0]!.user).not.toContain('【上一次输出的问题】');
+    expect(c.provider.calls[1]!.user).toMatch(/【上一次输出的问题】\n[^\n]*storyTime 写的是星期二，但 2026-10-14 是星期三/);
+  });
+});
+
+describe('consistency check (SPEC §2.7)', () => {
+  const contradiction = '老曾的 livehouse 还亮着灯';
+
+  it('checks every draft before saving it and records the call', async () => {
+    const c = await setup();
+    const res = await postJob(c);
+    await idle(c);
+    expect(c.provider.checkCalls).toHaveLength(1);
+    expect(c.provider.checkCalls[0]!.user).toContain('【新章节】');
+    expect(c.db.prepare(`SELECT purpose, outcome, prompt_version AS v FROM model_calls WHERE job_id = ? ORDER BY started_at, purpose`).all(res.body.job.id)).toEqual([
+      { purpose: 'chapter', outcome: 'ok', v: 'chapter-v6' },
+      { purpose: 'consistency', outcome: 'ok', v: 'consistency-v3' },
+    ]);
+    expect(await getJob(c, res.body.job.id)).toMatchObject({ status: 'succeeded', warnings: [] });
+  });
+
+  it('rewrites a chapter that contradicts earlier facts, quoting the problem to the model', async () => {
+    const c = await setup();
+    c.provider.push({ kind: 'draft', draft: { title: '矛盾的版本' } }, { kind: 'draft', draft: { title: '改好的版本' } });
+    c.provider.pushCheck(checkReport(contradiction));
+    const res = await postJob(c);
+    await idle(c);
+    expect(await getJob(c, res.body.job.id)).toMatchObject({ status: 'succeeded', attempts: 2, warnings: [] });
+    expect((await chapters(c)).chapters.map((ch) => ch.title)).toEqual(['改好的版本']);
+    expect(c.provider.calls[1]!.user).toMatch(/【上一次输出的问题】[\s\S]*「老曾的 livehouse 还亮着灯」：第 1 章已经写过相反的事/);
+    expect(c.sleep).not.toHaveBeenCalled();
+    expect(c.db.prepare(`SELECT outcome, error_message AS m FROM model_calls WHERE job_id = ? AND purpose = 'chapter' ORDER BY attempt`).all(res.body.job.id)).toEqual([
+      { outcome: 'invalid', m: expect.stringContaining('一致性检查') },
+      { outcome: 'ok', m: null },
+    ]);
+  });
+
+  it('saves the last draft with warnings when every attempt still contradicts', async () => {
+    const c = await setup();
+    c.provider.pushCheck(checkReport(contradiction), checkReport(contradiction), checkReport(contradiction));
+    const res = await postJob(c);
+    await idle(c);
+    const job = await getJob(c, res.body.job.id);
+    expect(job).toMatchObject({ status: 'succeeded', attempts: 3 });
+    expect(job.warnings.join('\n')).toContain('老曾的 livehouse 还亮着灯');
+    expect(await story(c)).toMatchObject({ chapterCount: 1 });
+  });
+
+  it('falls back to the checked draft when the rewrite fails', async () => {
+    const c = await setup();
+    c.provider.push({ kind: 'draft', draft: { title: '有矛盾但完整' } }, { kind: 'error', code: 'MODEL_REFUSED' });
+    c.provider.pushCheck(checkReport(contradiction));
+    const res = await postJob(c);
+    await idle(c);
+    const job = await getJob(c, res.body.job.id);
+    expect(job).toMatchObject({ status: 'succeeded', attempts: 2 });
+    expect(job.warnings.join('\n')).toContain('老曾的 livehouse 还亮着灯');
+    expect((await chapters(c)).chapters.map((ch) => ch.title)).toEqual(['有矛盾但完整']);
+  });
+
+  it('keeps soft issues as warnings without rewriting', async () => {
+    const c = await setup();
+    c.provider.pushCheck(checkReport(contradiction, 'soft'));
+    const res = await postJob(c);
+    await idle(c);
+    const job = await getJob(c, res.body.job.id);
+    expect(job).toMatchObject({ status: 'succeeded', attempts: 1 });
+    expect(job.warnings.join('\n')).toContain('疑似');
+  });
+
+  it('ignores issues that quote text the chapter does not contain', async () => {
+    const c = await setup();
+    c.provider.pushCheck(checkReport('这句话不在正文里'));
+    const res = await postJob(c);
+    await idle(c);
+    expect(await getJob(c, res.body.job.id)).toMatchObject({ status: 'succeeded', attempts: 1, warnings: [] });
+  });
+
+  it('saves the chapter with a warning when the check itself fails', async () => {
+    const c = await setup();
+    c.provider.pushCheck({ kind: 'error', code: 'MODEL_UNAVAILABLE' });
+    const res = await postJob(c);
+    await idle(c);
+    const job = await getJob(c, res.body.job.id);
+    expect(job).toMatchObject({ status: 'succeeded', attempts: 1 });
+    expect(job.warnings.join('\n')).toContain('一致性检查未完成');
+  });
+
+  it("stores the reviewer's reading of the main life area", async () => {
+    const c = await setup();
+    c.provider.pushCheck(areaReport('朋友'));
+    await postJob(c);
+    await idle(c);
+    expect(c.db.prepare('SELECT checked_area AS a FROM chapters WHERE story_id = ?').get(c.storyId)).toEqual({ a: '朋友' });
+  });
+
+  it('rewrites a chapter whose main thread stayed on the area the pacing hint asked to leave', async () => {
+    const c = await setup();
+    // Five chapters the reviewer reads as 旧事秘密, so chapter 6 is asked to change its main thread.
+    c.provider.pushCheck(...Array.from({ length: 5 }, () => areaReport('旧事秘密')), areaReport('旧事秘密'), areaReport('钱'));
+    for (let i = 0; i < 6; i++) {
+      await postJob(c);
+      await idle(c);
+    }
+    expect(c.provider.calls[5]!.user).toContain('的主线是「旧事秘密」');
+    expect(c.provider.calls[6]!.user).toMatch(/【上一次输出的问题】[\s\S]*本章的主线仍然是「旧事秘密」/);
+    expect(await story(c)).toMatchObject({ chapterCount: 6 });
+    expect(c.db.prepare('SELECT checked_area AS a FROM chapters WHERE story_id = ? AND number = 6').get(c.storyId)).toEqual({ a: '钱' });
+  });
+
+  it('can be switched off', async () => {
+    const c = await setup({ CONSISTENCY_CHECK: 'off' });
+    await postJob(c);
+    await idle(c);
+    expect(c.provider.checkCalls).toHaveLength(0);
+  });
+});
+
 describe('budget cap (T10)', () => {
   it('stops calling the model once the cap is reached', async () => {
     const c = await setup({ BUDGET_USD_CAP: '0.01' });
@@ -418,6 +561,7 @@ describe('export', () => {
     expect(res.body).toMatch(/^# 周野的故事/);
     expect(res.body).toContain('## 第1章 第1章的标题');
     expect(res.body).toContain('## 第2章 第2章的标题');
+    expect(res.body).toContain('*2026年10月14日 星期三 · 十月第二个周三，夜 · 成都，春熙路后巷*');
     expect(res.body).toContain('> 本章走向：接下来温暖一点');
     expect((await c.app.inject('/api/stories/nope/export.md')).statusCode).toBe(404);
   });

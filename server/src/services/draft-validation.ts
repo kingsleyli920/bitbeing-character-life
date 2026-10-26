@@ -1,6 +1,17 @@
-import { type ChapterDraft, chapterDraftSchema } from '@cl/shared';
+import { type ChapterDraft, chapterDraftSchema, daysBetween, weekdayMentioned, weekdayOf } from '@cl/shared';
 
-export type DraftResult = { ok: true; draft: ChapterDraft; warnings: string[] } | { ok: false; message: string };
+export type DraftResult =
+  | { ok: true; draft: ChapterDraft; warnings: string[]; daysSincePrevious: number }
+  | { ok: false; message: string };
+
+export interface DraftContext {
+  chapterNumber: number;
+  hasDirection: boolean;
+  /** Start date of the previous chapter; null for chapter 1 and chapters written before dates existed. */
+  previousDate?: string | null;
+  /** Everything the model was shown; English words that appear here may be reused. */
+  referenceText?: string;
+}
 
 function stripFence(text: string): string {
   const trimmed = text.trim();
@@ -90,8 +101,35 @@ function clipSoftLimits(raw: unknown, warnings: string[]): unknown {
   return d;
 }
 
+const LATIN_WORD = /[A-Za-z][A-Za-z'-]{2,}/g;
+
+/**
+ * Short Chinese fields must not drift into English ("answer" in a summary, SPEC §2.2). A Latin word
+ * is allowed if the chapter body or the context already uses it (names, "livehouse", "Wi-Fi").
+ */
+function strayEnglish(draft: ChapterDraft, referenceText: string): string | null {
+  const known = new Set(`${referenceText}\n${draft.body}`.match(LATIN_WORD)?.map((w) => w.toLowerCase()) ?? []);
+  const fields: [string, string][] = [
+    ['title', draft.title],
+    ['summary', draft.summary],
+    ...draft.beatTags.map((t, i): [string, string] => [`beatTags.${i}`, t]),
+    ['state.situation', draft.state.situation],
+    ['state.mood', draft.state.mood],
+    ...draft.state.goals.map((g, i): [string, string] => [`state.goals.${i}`, g]),
+    ...draft.memoryOps.flatMap((m, i): [string, string][] => [
+      [`memoryOps.${i}.key`, m.key],
+      [`memoryOps.${i}.content`, m.content],
+    ]),
+  ];
+  for (const [path, value] of fields) {
+    const word = value.match(LATIN_WORD)?.find((w) => !known.has(w.toLowerCase()));
+    if (word) return `${path} 里混入了英文词“${word}”，请改用中文`;
+  }
+  return null;
+}
+
 /** Validates one model response (SPEC §2.2). Hard failures discard the whole chapter. */
-export function parseDraft(text: string, ctx: { chapterNumber: number; hasDirection: boolean }): DraftResult {
+export function parseDraft(text: string, ctx: DraftContext): DraftResult {
   let raw: unknown;
   try {
     raw = JSON.parse(stripFence(text));
@@ -115,5 +153,17 @@ export function parseDraft(text: string, ctx: { chapterNumber: number; hasDirect
   if (ctx.hasDirection && !draft.directionHandling) {
     return { ok: false, message: '有故事走向时 directionHandling 不能为空' };
   }
-  return { ok: true, draft: ctx.hasDirection ? draft : { ...draft, directionHandling: null }, warnings };
+  const previousDate = ctx.previousDate ?? null;
+  const days = previousDate ? daysBetween(previousDate, draft.storyDate) : 0;
+  if (days < 0) {
+    return { ok: false, message: `storyDate ${draft.storyDate} 早于上一章的日期 ${previousDate}，时间不能倒流` };
+  }
+  const named = weekdayMentioned(draft.storyTime);
+  const actual = weekdayOf(draft.storyDate);
+  if (named && named !== actual) {
+    return { ok: false, message: `storyTime 写的是${named}，但 ${draft.storyDate} 是${actual}` };
+  }
+  const stray = strayEnglish(draft, ctx.referenceText ?? '');
+  if (stray) return { ok: false, message: stray };
+  return { ok: true, draft: ctx.hasDirection ? draft : { ...draft, directionHandling: null }, warnings, daysSincePrevious: days };
 }

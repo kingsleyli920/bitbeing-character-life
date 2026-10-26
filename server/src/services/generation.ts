@@ -4,6 +4,9 @@ import {
   arcSummaryWireSchema,
   chapterDraftWireSchema,
   type ChapterDraft,
+  type ConsistencyIssue,
+  consistencyReportWireSchema,
+  type LifeArea,
   type JobErrorCode,
   JOB_ERROR_MESSAGES,
 } from '@cl/shared';
@@ -13,6 +16,7 @@ import type { AppDeps } from '../deps.js';
 import { HttpError, notFound } from '../http-errors.js';
 import { ModelError, type ModelProvider, type ModelRequest, RETRYABLE_CODES } from '../model/provider.js';
 import { ARC_SYSTEM_PROMPT, CHAPTER_SYSTEM_PROMPT, PROMPT_VERSION } from '../prompts/chapter.js';
+import { CONSISTENCY_PROMPT_VERSION, CONSISTENCY_SYSTEM_PROMPT } from '../prompts/consistency.js';
 import { insertChapter } from '../repos/chapters.js';
 import { getDirection } from '../repos/directions.js';
 import { getActiveJobRow, getJobRow, type JobRow, toJob, totalSpentUsd } from '../repos/jobs.js';
@@ -21,7 +25,8 @@ import { setCallOutcome } from '../repos/model-calls.js';
 import { snapshotProfile } from '../repos/profiles.js';
 import { getStory, type StoryRecord } from '../repos/stories.js';
 import { arcPrompt, missingArc } from './arc-summary.js';
-import { assembleContext, estimateTokens } from './context-builder.js';
+import { consistencyPrompt, describeIssues, parseConsistencyReport } from './consistency.js';
+import { assembleContext, type ContextData, estimateTokens } from './context-builder.js';
 import { loadContextData } from './context-loader.js';
 import { parseDraft } from './draft-validation.js';
 import { applyMemoryOps } from './memory-apply.js';
@@ -39,8 +44,24 @@ const MAX_RETRY_AFTER_MS = 20_000;
 const CHAPTER_MAX_TOKENS = 8_000;
 const ARC_MAX_TOKENS = 1_500;
 const ARC_TIMEOUT_MS = 30_000;
+const CHECK_MAX_TOKENS = 4_000;
+const CHECK_TIMEOUT_MS = 30_000;
+const CHECK_MIN_MS = 5_000;
 
 type CommitOutcome = 'committed' | 'stale' | 'discarded';
+
+/** A draft that passed validation, waiting to be committed. */
+interface Candidate {
+  draft: ChapterDraft;
+  warnings: string[];
+  daysSincePrevious: number;
+  checkedArea: LifeArea | null;
+  callId: string;
+}
+
+type CheckOutcome =
+  | { kind: 'checked'; hard: ConsistencyIssue[]; soft: ConsistencyIssue[]; mainArea: LifeArea }
+  | { kind: 'skipped'; warning: string | null };
 
 /**
  * Runs chapter generation jobs inside the server process (SPEC §3). One active job per story is
@@ -175,7 +196,8 @@ export class GenerationService {
       const direction = job.direction_id ? (getDirection(db, storyId, job.direction_id) ?? null) : null;
       await this.ensureArcSummary(job, story, deadline);
       if (this.closing) return this.finish(storyId, jobId, 'interrupted', 'SERVER_RESTART');
-      const context = assembleContext(loadContextData(db, getStory(db, storyId)!, job.target_chapter, direction), {
+      const data = loadContextData(db, getStory(db, storyId)!, job.target_chapter, direction);
+      const context = assembleContext(data, {
         budgetTokens: config.contextBudgetTokens,
         systemTokens: estimateTokens(CHAPTER_SYSTEM_PROMPT),
       });
@@ -209,40 +231,97 @@ export class GenerationService {
           knownKeys,
         },
       };
+      const draftContext = {
+        chapterNumber: job.target_chapter,
+        hasDirection: Boolean(direction),
+        previousDate: data.chapterDigests.at(-1)?.storyDate ?? null,
+        referenceText: context.user,
+      };
 
       let lastError = new ModelError('INTERNAL', JOB_ERROR_MESSAGES.INTERNAL);
+      /** Why the previous attempt was not used; shown to the next attempt (SPEC §2.2). */
+      let feedback: string | null = null;
+      /** A complete draft rejected only for contradictions; saved if no attempt does better (SPEC §2.7). */
+      let fallback: Candidate | null = null;
       const minAttemptMs = Math.min(5_000, config.attemptTimeoutMs / 2);
       for (let attempt = 1; attempt <= config.maxAttempts; attempt++) {
         if (this.closing) return this.finish(storyId, jobId, 'interrupted', 'SERVER_RESTART');
         if (totalSpentUsd(db) >= config.budgetUsdCap) {
+          if (fallback) return this.commitFallback(job, fallback);
           return this.finish(storyId, jobId, 'failed', 'BUDGET_EXCEEDED', `已达到本地费用上限 $${config.budgetUsdCap}`);
         }
         const remaining = deadline - Date.now();
         if (attempt > 1 && remaining < minAttemptMs) break;
         db.prepare('UPDATE jobs SET attempts = ? WHERE story_id = ? AND id = ?').run(attempt, storyId, jobId);
 
-        const outcome = await this.attempt({ ...baseRequest }, { storyId, jobId, attempt, timeoutMs: Math.min(config.attemptTimeoutMs, Math.max(remaining, 1)) });
+        const user = feedback ? `${context.user}\n\n【上一次输出的问题】\n${feedback}` : context.user;
+        const outcome = await this.attempt(
+          { ...baseRequest, user },
+          { storyId, jobId, attempt, timeoutMs: Math.min(config.attemptTimeoutMs, Math.max(remaining, 1)) },
+        );
+        let retryNow = false;
         if (outcome.kind === 'ok') {
-          const parsed = parseDraft(outcome.response.text, { chapterNumber: job.target_chapter, hasDirection: Boolean(direction) });
+          const parsed = parseDraft(outcome.response.text, draftContext);
           if (parsed.ok) {
-            const result = this.commit(job, parsed.draft, parsed.warnings);
-            if (result === 'discarded') setCallOutcome(db, outcome.callId, 'discarded');
-            return;
+            const candidate: Candidate = {
+              draft: parsed.draft,
+              warnings: parsed.warnings,
+              daysSincePrevious: parsed.daysSincePrevious,
+              checkedArea: null,
+              callId: outcome.callId,
+            };
+            const check = await this.checkConsistency(job, data, parsed.draft, attempt, deadline);
+            if (check.kind === 'skipped') {
+              if (check.warning) candidate.warnings.push(check.warning);
+              return void this.commitCandidate(job, candidate);
+            }
+            candidate.checkedArea = check.mainArea;
+            candidate.warnings.push(...check.soft.map((i) => `一致性检查（疑似）：「${i.quote}」${i.conflict}`));
+            // The pacing section asked for another part of life, but the reviewer still reads the old one (prompt v6).
+            const stuck = context.rotation && check.mainArea === context.rotation.avoid ? context.rotation : null;
+            const canRewrite = attempt < config.maxAttempts && deadline - Date.now() >= config.attemptTimeoutMs / 2 && !this.closing;
+            if ((!check.hard.length && !stuck) || !canRewrite) {
+              candidate.warnings.push(...check.hard.map((i) => `一致性检查：「${i.quote}」${i.conflict}（重写次数已用完，保留了这一版）`));
+              if (stuck) candidate.warnings.push(`节奏：本章主线仍是「${stuck.avoid}」（重写次数已用完，保留了这一版）`);
+              return void this.commitCandidate(job, candidate);
+            }
+            const reasons = [
+              ...(check.hard.length ? [`与前文矛盾：\n${describeIssues(check.hard)}`] : []),
+              ...(stuck
+                ? [`本章的主线仍然是「${stuck.avoid}」。请把主线换成${stuck.suggest.map((a) => `「${a}」`).join('、')}中的一个，「${stuck.avoid}」最多作为背景带过一两句。`]
+                : []),
+            ];
+            setCallOutcome(db, outcome.callId, 'invalid', `${check.hard.length ? '一致性检查发现' : '节奏检查发现'}${reasons.join('\n')}`);
+            this.deps.logger?.warn({ jobId, attempt, issues: check.hard.length, stuck: Boolean(stuck) }, 'draft rejected by review; rewriting');
+            fallback = {
+              ...candidate,
+              warnings: [
+                ...candidate.warnings,
+                ...check.hard.map((i) => `一致性检查：「${i.quote}」${i.conflict}（重写没有成功，保留了这一版）`),
+                ...(stuck ? [`节奏：本章主线仍是「${stuck.avoid}」（重写没有成功，保留了这一版）`] : []),
+              ],
+            };
+            feedback = `上一次写的版本没有被采用：\n${reasons.join('\n')}\n请重写本章。`;
+            lastError = new ModelError('MODEL_INVALID_OUTPUT', check.hard.length ? '与前文矛盾' : '主线没有换');
+            retryNow = true;
+          } else {
+            setCallOutcome(db, outcome.callId, 'invalid', parsed.message);
+            lastError = new ModelError('MODEL_INVALID_OUTPUT', parsed.message);
+            feedback = `上一次的输出没有通过校验：${parsed.message}。请修正后重新输出整章。`;
+            this.deps.logger?.warn({ jobId, attempt, reason: parsed.message }, 'invalid model output');
           }
-          setCallOutcome(db, outcome.callId, 'invalid', parsed.message);
-          lastError = new ModelError('MODEL_INVALID_OUTPUT', parsed.message);
-          this.deps.logger?.warn({ jobId, attempt, reason: parsed.message }, 'invalid model output');
         } else {
           lastError = outcome.error;
         }
         if (this.closing) return this.finish(storyId, jobId, 'interrupted', 'SERVER_RESTART');
         if (!RETRYABLE_CODES.has(lastError.code)) break;
-        if (attempt < config.maxAttempts) {
+        if (attempt < config.maxAttempts && !retryNow) {
           const wait = Math.min(lastError.opts.retryAfterMs ?? BACKOFF_MS[attempt - 1] ?? BACKOFF_MS.at(-1)!, MAX_RETRY_AFTER_MS);
           if (Date.now() + wait + minAttemptMs > deadline) break;
           await this.sleep(wait);
         }
       }
+      if (fallback) return this.commitFallback(job, fallback);
       this.finish(storyId, jobId, 'failed', lastError.code, `${JOB_ERROR_MESSAGES[lastError.code]}：${lastError.message}`);
     } catch (err) {
       this.deps.logger?.error({ err, jobId }, 'generation job failed unexpectedly');
@@ -295,22 +374,67 @@ export class GenerationService {
     insertArcSummary(db, story.id, gap.from, gap.to, parsed.data.summary, now());
   }
 
+  /**
+   * Asks the model whether the draft contradicts what is already established (SPEC §2.7). Never
+   * blocks the chapter: no budget, no time, a failed call or an unusable report all skip the check.
+   */
+  private async checkConsistency(job: JobRow, data: ContextData, draft: ChapterDraft, attempt: number, deadline: number): Promise<CheckOutcome> {
+    const { db, config } = this.deps;
+    if (!config.consistencyCheck) return { kind: 'skipped', warning: null };
+    if (totalSpentUsd(db) >= config.budgetUsdCap) return { kind: 'skipped', warning: '一致性检查未完成：已达到费用上限' };
+    const timeoutMs = Math.min(CHECK_TIMEOUT_MS, deadline - Date.now());
+    if (timeoutMs < CHECK_MIN_MS) return { kind: 'skipped', warning: '一致性检查未完成：时间不足' };
+    const outcome = await this.attempt(
+      {
+        purpose: 'consistency',
+        model: job.model,
+        system: CONSISTENCY_SYSTEM_PROMPT,
+        user: consistencyPrompt(data, draft),
+        schemaName: 'consistency_report',
+        jsonSchema: consistencyReportWireSchema,
+        maxTokens: CHECK_MAX_TOKENS,
+        trace: { storyId: job.story_id, chapterNumber: job.target_chapter, characterName: data.card.name, directionText: null, knownKeys: [] },
+      },
+      { storyId: job.story_id, jobId: job.id, attempt, timeoutMs },
+      CONSISTENCY_PROMPT_VERSION,
+    );
+    if (outcome.kind === 'error') return { kind: 'skipped', warning: `一致性检查未完成：${JOB_ERROR_MESSAGES[outcome.error.code]}` };
+    const report = parseConsistencyReport(outcome.response.text, draft.body);
+    if (!report.ok) {
+      setCallOutcome(db, outcome.callId, 'invalid', report.message);
+      return { kind: 'skipped', warning: `一致性检查未完成：${report.message}` };
+    }
+    if (report.dropped) this.deps.logger?.info({ jobId: job.id, dropped: report.dropped }, 'consistency issues without a matching quote ignored');
+    return { kind: 'checked', hard: report.hard, soft: report.soft, mainArea: report.mainArea };
+  }
+
   private attempt(
     base: Omit<ModelRequest, 'signal'>,
     meta: { storyId: string; jobId: string; attempt: number; timeoutMs: number },
+    promptVersion = PROMPT_VERSION,
   ): Promise<CallOutcome> {
     return callModel(
       { ...this.deps, controllers: this.controllers },
       base,
-      { jobId: meta.jobId, storyId: meta.storyId, characterId: null, attempt: meta.attempt, timeoutMs: meta.timeoutMs, promptVersion: PROMPT_VERSION },
+      { jobId: meta.jobId, storyId: meta.storyId, characterId: null, attempt: meta.attempt, timeoutMs: meta.timeoutMs, promptVersion },
     );
+  }
+
+  private commitFallback(job: JobRow, candidate: Candidate): void {
+    setCallOutcome(this.deps.db, candidate.callId, 'ok');
+    this.commitCandidate(job, candidate);
+  }
+
+  private commitCandidate(job: JobRow, candidate: Candidate): void {
+    const result = this.commit(job, candidate);
+    if (result === 'discarded') setCallOutcome(this.deps.db, candidate.callId, 'discarded');
   }
 
   /**
    * Saves the chapter and every state change in one transaction (T8), only if this job still owns
    * the next chapter (T3). Throws on a database error, which rolls everything back.
    */
-  private commit(job: JobRow, draft: ChapterDraft, draftWarnings: string[] = []): CommitOutcome {
+  private commit(job: JobRow, { draft, daysSincePrevious, checkedArea, warnings: draftWarnings }: Candidate): CommitOutcome {
     const { db, now } = this.deps;
     const storyId = job.story_id;
     return transaction(db, () => {
@@ -328,7 +452,16 @@ export class GenerationService {
       }
       const time = now();
       const chapterId = randomUUID();
-      insertChapter(db, storyId, { id: chapterId, number: job.target_chapter, draft, directionId: job.direction_id, jobId: job.id, now: time });
+      insertChapter(db, storyId, {
+        id: chapterId,
+        number: job.target_chapter,
+        draft,
+        daysSincePrevious,
+        checkedArea,
+        directionId: job.direction_id,
+        jobId: job.id,
+        now: time,
+      });
       const warnings = [...draftWarnings, ...applyMemoryOps(db, storyId, job.target_chapter, draft.memoryOps, time)];
       for (const change of draft.traitChanges) insertTraitChange(db, storyId, job.target_chapter, change);
       db.prepare(

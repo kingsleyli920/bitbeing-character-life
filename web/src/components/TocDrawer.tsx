@@ -1,3 +1,4 @@
+import { formatStoryDate } from '@cl/shared';
 import { useToc } from '../api/queries';
 import { Modal } from './Modal';
 import { ErrorBox, Loading } from './QueryState';
@@ -15,7 +16,7 @@ export function TocDrawer({ storyId, total, onJump, onClose }: { storyId: string
               <button type="button" className="toc-item" onClick={() => onJump(item.number)}>
                 <span className="toc-no">第 {item.number} 段</span>
                 <span className="toc-title">{item.title}</span>
-                <span className="toc-time">{item.storyTime}</span>
+                <span className="toc-time">{item.storyDate ? formatStoryDate(item.storyDate) : item.storyTime}</span>
               </button>
             </li>
           ))}

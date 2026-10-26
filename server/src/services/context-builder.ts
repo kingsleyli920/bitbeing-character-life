@@ -1,5 +1,10 @@
 import {
+  calendarLookup,
   type CharacterCard,
+  daysBetween,
+  formatStoryDate,
+  type LifeArea,
+  LIFE_AREAS,
   type MemoryKind,
   type MemoryStatus,
   type NarrativeStyle,
@@ -45,6 +50,12 @@ export interface ChapterDigest {
   beatTags: string[];
   /** Story days since the previous chapter; null when unknown (written before prompt v4). */
   daysSincePrevious: number | null;
+  /** Story-calendar start date; null for chapters written before prompt v5. */
+  storyDate: string | null;
+  /** Life areas, main one first; empty for chapters written before prompt v5. */
+  lifeAreas: LifeArea[];
+  /** Main life area as read by the consistency reviewer (prompt v6); null when unknown. */
+  checkedArea: LifeArea | null;
 }
 
 export interface ContextData {
@@ -77,6 +88,8 @@ export interface BuiltContext {
   budgetTokens: number;
   includedMemoryKeys: string[];
   referencedChapters: number[];
+  /** Set when the pacing section asks this chapter to change its main life area (SPEC §2.3 #14). */
+  rotation: { avoid: LifeArea; suggest: LifeArea[] } | null;
 }
 
 const STYLE_TEXT: Record<NarrativeStyle, string> = {
@@ -102,7 +115,12 @@ const OPEN_THREAD_CAP = 10;
 const FOCUS_WINDOW = 8;
 const FOCUS_THRESHOLD = 6;
 const TIME_WINDOW = 5;
-const TIME_MIN_DAYS = 3;
+const TIME_MIN_DAYS = 7;
+const VOLUME_SIZE = 10;
+const BIG_JUMP_DAYS = 14;
+const AREA_WINDOW = 10;
+const AREA_THRESHOLD = 5;
+const AREA_SUGGESTIONS = 3;
 
 function renderProfile(fields: ProfileField[]): string {
   const extra = fields.filter((f) => f.key !== 'name');
@@ -201,7 +219,7 @@ export function assembleContext(
     .slice(0, EXCERPT_LIMIT);
   // Long-story pacing (SPEC §2.5): threads left hanging too long, too many open threads, one thread dominating.
   const stale = open
-    .filter((m) => m.importance >= 2 && n - m.firstChapter >= STALE_AFTER)
+    .filter((m) => (m.importance >= 2 || m.kind === 'promise') && n - m.firstChapter >= STALE_AFTER)
     .sort((a, b) => a.firstChapter - b.firstChapter)
     .slice(0, STALE_LIMIT);
   const dominant = open
@@ -210,9 +228,34 @@ export function assembleContext(
   const recentDays = data.chapterDigests.slice(-TIME_WINDOW).map((d) => d.daysSincePrevious);
   const knownDays = recentDays.length === TIME_WINDOW && recentDays.every((d) => d !== null);
   const daysPassed = knownDays ? recentDays.reduce<number>((a, b) => a + (b ?? 0), 0) : null;
+  const slowTime = daysPassed !== null && daysPassed < TIME_MIN_DAYS;
+  const newVolume = n > 1 && (n - 1) % VOLUME_SIZE === 0 && !recentDays.some((d) => (d ?? 0) >= BIG_JUMP_DAYS);
+  // Life areas: the reader's direction takes priority, so the rotation hint is skipped while one is active.
+  // The reviewer's reading wins over the writer's own label, which tends to be optimistic (prompt v6).
+  const mainOf = (d: ChapterDigest) => d.checkedArea ?? d.lifeAreas[0] ?? null;
+  const areaWindow = data.chapterDigests.slice(-AREA_WINDOW).filter((d) => mainOf(d));
+  const mainCounts = new Map<LifeArea, number>();
+  for (const d of areaWindow) mainCounts.set(mainOf(d)!, (mainCounts.get(mainOf(d)!) ?? 0) + 1);
+  const [topArea, topCount] = [...mainCounts].sort((a, b) => b[1] - a[1])[0] ?? [null, 0];
+  const lastSeen = new Map<LifeArea, number>();
+  for (const d of data.chapterDigests) for (const a of [...d.lifeAreas, ...(d.checkedArea ? [d.checkedArea] : [])]) lastSeen.set(a, d.number);
+  const areaSuggestions = LIFE_AREAS.filter((a) => a !== topArea)
+    .sort((a, b) => (lastSeen.get(a) ?? 0) - (lastSeen.get(b) ?? 0))
+    .slice(0, AREA_SUGGESTIONS);
+  const rotation = topArea && topCount >= AREA_THRESHOLD && !data.direction ? { avoid: topArea, suggest: areaSuggestions } : null;
   const pacingLines = [
-    ...(daysPassed !== null && daysPassed < TIME_MIN_DAYS
-      ? [`最近 ${TIME_WINDOW} 章在故事里只过去了约 ${daysPassed} 天。本章请让时间明显往前走（几天到几周），让季节、天气和处境跟着变化。`]
+    ...(slowTime
+      ? [
+          `最近 ${TIME_WINDOW} 章在故事里只过去了 ${daysPassed} 天。本章请从上一章之后 1–4 周开始：开头用一两句交代这段时间里的日常，让季节、天气和处境跟着变化。如果上一章停在一件必须马上处理的事上，先用几句话交代它的结果，再跳过去。`,
+        ]
+      : []),
+    ...(!slowTime && newVolume
+      ? ['新的一卷从本章开始：适合做一次较大的时间跳跃（两周到两个月），让季节或生活处境有明显变化。']
+      : []),
+    ...(rotation
+      ? [
+          `最近 ${areaWindow.length} 章里有 ${topCount} 章的主线是「${topArea}」。本章请把主线放在${areaSuggestions.map((a) => `「${a}」`).join('、')}中的一个上（这些方面最近很少写到）。「${topArea}」这条线最多作为背景带过一两句。`,
+        ]
       : []),
     ...(open.length > OPEN_THREAD_CAP
       ? [`未解决的线索已有 ${open.length} 条：本章不要再开新的线索，优先推进或收束已有的。`]
@@ -223,6 +266,14 @@ export function assembleContext(
         ]
       : []),
   ];
+  const previousDigest = data.chapterDigests.at(-1);
+  const firstDated = data.chapterDigests.find((d) => d.storyDate);
+  const calendarText =
+    n === 1
+      ? '这是第 1 章。请根据角色卡（季节、年代、开场情境）选一个开始日期填入 storyDate（YYYY-MM-DD；年份可以虚构，架空世界也用公历记录）。'
+      : previousDigest?.storyDate && firstDated?.storyDate
+        ? `上一章开始于 ${formatStoryDate(previousDigest.storyDate)}（故事第 ${daysBetween(firstDated.storyDate, previousDigest.storyDate) + 1} 天）。本章的 storyDate 不能早于它。\n下面是可能的开始日期和对应的星期，storyTime 或正文提到星期几时以此为准：${calendarLookup(previousDigest.storyDate).join('；')}`
+        : '前面的章节没有记录日期。请为本章选一个与前情相符的日期填入 storyDate（YYYY-MM-DD），之后的章节会以它为起点。';
   const dormant = open
     .filter((m) => m.lastChapter <= n - 1 - DORMANT_AFTER)
     .sort((a, b) => a.lastChapter - b.lastChapter)
@@ -249,6 +300,7 @@ export function assembleContext(
         ? `<<<走向开始>>>\n${data.direction.text}\n<<<走向结束>>>\n已生效 ${data.direction.chaptersActive} 章${data.direction.chaptersActive === 0 ? '（从本章开始生效）' : ''}。请在本章用具体的行动、冲突或结果推进它，可以分几章逐步实现。`
         : '当前没有指定走向，按角色自身的生活逻辑发展。',
     );
+    add('calendar', '故事日历', calendarText);
     if (open.length) {
       add(
         'open_threads',
@@ -388,5 +440,6 @@ export function assembleContext(
     budgetTokens: opts.budgetTokens,
     includedMemoryKeys: [...included],
     referencedChapters: [...referenced].sort((a, b) => a - b),
+    rotation,
   };
 }

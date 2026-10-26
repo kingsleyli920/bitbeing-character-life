@@ -1,5 +1,5 @@
 /** Current schema version (docs/SPEC.md §4.3). Bump it and append a step to `MIGRATIONS` when changing the schema. */
-export const SCHEMA_VERSION = 3;
+export const SCHEMA_VERSION = 5;
 
 /** Version 1, as shipped in M2–M5. New databases are created from it and then migrated. */
 export const SCHEMA_V1_SQL = `
@@ -185,5 +185,50 @@ CREATE INDEX model_calls_by_character ON model_calls(character_id);
     // Story-time progression per chapter (prompt v4 pacing rule); NULL for chapters written before v3.
     version: 3,
     sql: `ALTER TABLE chapters ADD COLUMN days_since_previous INTEGER;`,
+  },
+  {
+    // Prompt v5: chapters carry their story-calendar date and life areas; consistency checks are a new call purpose.
+    version: 4,
+    sql: `
+ALTER TABLE chapters ADD COLUMN story_date TEXT;
+ALTER TABLE chapters ADD COLUMN life_areas TEXT NOT NULL DEFAULT '[]';
+
+CREATE TABLE model_calls_v4 (
+  id TEXT PRIMARY KEY,
+  job_id TEXT,
+  story_id TEXT,
+  character_id TEXT,
+  purpose TEXT NOT NULL CHECK (purpose IN ('chapter', 'arc_summary', 'profile', 'consistency')),
+  attempt INTEGER NOT NULL,
+  model TEXT NOT NULL,
+  provider TEXT,
+  prompt_version TEXT NOT NULL,
+  started_at TEXT NOT NULL,
+  latency_ms INTEGER,
+  outcome TEXT NOT NULL,
+  error_code TEXT,
+  error_message TEXT,
+  finish_reason TEXT,
+  input_tokens INTEGER,
+  output_tokens INTEGER,
+  reasoning_tokens INTEGER,
+  cost_usd REAL,
+  cost_source TEXT NOT NULL,
+  request_json TEXT NOT NULL,
+  response_text TEXT
+);
+INSERT INTO model_calls_v4 SELECT id, job_id, story_id, character_id, purpose, attempt, model, provider, prompt_version, started_at,
+  latency_ms, outcome, error_code, error_message, finish_reason, input_tokens, output_tokens, reasoning_tokens, cost_usd, cost_source,
+  request_json, response_text FROM model_calls;
+DROP TABLE model_calls;
+ALTER TABLE model_calls_v4 RENAME TO model_calls;
+CREATE INDEX model_calls_by_job ON model_calls(job_id);
+CREATE INDEX model_calls_by_character ON model_calls(character_id);
+`,
+  },
+  {
+    // Prompt v6: the consistency reviewer's own reading of each chapter's main life area drives rotation.
+    version: 5,
+    sql: `ALTER TABLE chapters ADD COLUMN checked_area TEXT;`,
   },
 ];

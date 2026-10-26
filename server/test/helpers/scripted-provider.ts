@@ -1,4 +1,4 @@
-import type { ChapterDraft, JobErrorCode } from '@cl/shared';
+import { type ChapterDraft, type JobErrorCode, LIFE_AREAS } from '@cl/shared';
 import { ModelError, type ModelProvider, type ModelRequest, type ModelResponse } from '../../src/model/provider.js';
 import { makeDraft } from './drafts.js';
 
@@ -18,7 +18,9 @@ export class ScriptedProvider implements ModelProvider {
   readonly calls: ModelRequest[] = [];
   readonly arcCalls: ModelRequest[] = [];
   readonly profileCalls: ModelRequest[] = [];
+  readonly checkCalls: ModelRequest[] = [];
   private readonly profileSteps: Step[] = [];
+  private readonly checkSteps: Step[] = [];
   private readonly steps: Step[] = [];
   private readonly arcSteps: Step[] = [];
   /** Builds the default draft for a chapter when no step is queued. */
@@ -35,6 +37,12 @@ export class ScriptedProvider implements ModelProvider {
   /** Steps for profile calls (default: a valid profile). */
   pushProfile(...steps: Step[]): this {
     this.profileSteps.push(...steps);
+    return this;
+  }
+
+  /** Steps for consistency checks (default: no issues). */
+  pushCheck(...steps: Step[]): this {
+    this.checkSteps.push(...steps);
     return this;
   }
 
@@ -61,6 +69,12 @@ export class ScriptedProvider implements ModelProvider {
       const step = this.profileSteps.shift() ?? { kind: 'text', text: JSON.stringify(scriptedProfile()) };
       return this.run(step, req);
     }
+    if (req.purpose === 'consistency') {
+      this.checkCalls.push(req);
+      // Default: no issues, and a main area that changes every chapter so pacing rules stay quiet.
+      const mainArea = LIFE_AREAS[req.trace.chapterNumber % LIFE_AREAS.length];
+      return this.run(this.checkSteps.shift() ?? { kind: 'text', text: JSON.stringify({ issues: [], mainArea }) }, req);
+    }
     if (req.purpose === 'arc_summary') {
       this.arcCalls.push(req);
       const step = this.arcSteps.shift() ?? { kind: 'text', text: JSON.stringify({ summary: `卷摘要：${'这一卷发生了很多事。'.repeat(5)}` }) };
@@ -85,7 +99,7 @@ export class ScriptedProvider implements ModelProvider {
         return this.reply(JSON.stringify(draft), step.costUsd ?? 0.001);
       }
       case 'text':
-        return this.reply(step.text, 0.001);
+        return this.reply(step.text, req.purpose === 'consistency' ? 0 : 0.001);
       case 'error':
         throw new ModelError(step.code, `scripted ${step.code}`, step.retryAfterMs ? { retryAfterMs: step.retryAfterMs } : {});
       case 'hang':
@@ -118,4 +132,14 @@ export function scriptedProfile() {
       reason: i < 2 ? '' : '根据背景推断',
     })),
   };
+}
+
+/** A consistency report that flags `quote` (which must appear in the checked chapter body). */
+export function checkReport(quote: string, severity: 'hard' | 'soft' = 'hard'): Step {
+  return { kind: 'text', text: JSON.stringify({ issues: [{ quote, conflict: '第 1 章已经写过相反的事', chapter: 1, severity }], mainArea: '工作学业' }) };
+}
+
+/** A clean consistency report whose reviewer reads the chapter's main life area as `mainArea`. */
+export function areaReport(mainArea: string): Step {
+  return { kind: 'text', text: JSON.stringify({ issues: [], mainArea }) };
 }

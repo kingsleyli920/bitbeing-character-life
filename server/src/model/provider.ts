@@ -1,6 +1,6 @@
 import type { JobErrorCode } from '@cl/shared';
 
-export type ModelPurpose = 'chapter' | 'arc_summary' | 'profile';
+export type ModelPurpose = 'chapter' | 'arc_summary' | 'profile' | 'consistency';
 export type CostSource = 'reported' | 'estimated' | 'unknown';
 
 export interface ModelRequest {

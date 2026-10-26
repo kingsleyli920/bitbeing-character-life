@@ -69,6 +69,8 @@ export function makeChapter(number: number, over: Partial<Chapter> = {}): Chapte
     number,
     title: `第${number}章的标题`,
     storyTime: `第${number}天`,
+    storyDate: null,
+    lifeAreas: ['工作学业'],
     location: '成都',
     body: `第${number}章的第一段。\n\n第${number}章的第二段。`,
     summary: `第${number}章摘要`,

@@ -10,21 +10,24 @@
 | M4 | 卷摘要、T1–T10、重启恢复、费用上限、反向验证 | L1b/L3 + 反向验证 | ✅ |
 | M5 | 导入/导出/目录/时间线、视觉回归、L6 评测工具；按参考图重做单页工作台；角色卡补全 | L1–L5 + 视觉基线 + 真实评测 | ✅ |
 | M6 | 101 段长测、走向 A/B、注入测试；发现长篇停滞 → prompt v3/v4；演示数据、截图、文档、PDF、干净环境复验 | `test:all` + 干净克隆 + 真实模型评测 | ✅ 2026-10-25 |
+| M7 | 质量迭代：服务端日历、生活面轮换、提交前一致性检查（v5）→ 检查器判断驱动轮换（v6）；独立审计脚本；密钥扫描；自动录屏 | `test:all` + 干净克隆 + v4/v5/v6 同尺审计 | ✅ 2026-10-26 |
 
 ## 增强项（未做）
 
 - 酒馆 PNG 角色卡（读取 `chara` tEXt 块）
 - 生成时正文流式预览
-- 一致性 / 节奏的“审稿”调用（见 ARCHITECTURE §8）
+- 结构化的“账目 / 物品下落”记忆（剩余矛盾的主要来源，见 EVALUATION §4.4）
+- 揭晓后几段内不新开“旧事秘密”类线索的节奏规则
 
 ## 阻塞
 
 无。
 
-## 交接（2026-10-25）
+## 交接（2026-10-26）
 
-- 分支：`main`（`1271e62` 起），已推送到私有仓库 `kingsleyli920/bitbeing-character-life`。工作分支 m1–m6 均已合并。
-- 最近验证：`npm run test:all` 全部通过（Vitest 207 + Playwright 12，47 秒）；从 GitHub 重新克隆的干净目录复验通过；干净目录里真实模型生成一段成功。
-- 评测证据：`docs/EVALUATION.md`、`docs/eval/`（v4 全文与报告；v2/v3 长测报告用于对比）。原始数据在 `eval/out/`（不入库，可用 `npm run eval -- <场景>` 复现）。
-- 文档 PDF：`npm run docs:pdf` 生成 `docs/ARCHITECTURE.pdf`。
-- 还需要负责人操作：录屏（步骤见 `docs/DEMO.md`）；如果要换 key，在 OpenRouter 后台为本项目单独建一把带额度上限的 key，然后替换 `.env.local`。
+- 分支：`m7-quality` 合并到 `main` 并推送到私有仓库 `kingsleyli920/bitbeing-character-life`。
+- 最近验证：见 EVALUATION §10（`test:all`、干净克隆复验、真实模型生成）。
+- 评测证据：`docs/EVALUATION.md`；全文和报告在 `docs/eval/`；v4/v5/v6 的审计在 `docs/eval/audit/`。原始数据在 `eval/out/`（不入库）。
+- 费用：OpenRouter 显示这把 key 本周用量 $4.51（项目上限 $5）。**不要再跑整套评测**，否则会超出上限；单段生成约 $0.005–0.01。
+- 录屏：`docs/media/demo.mp4`，可用 `scripts/record-demo.ts` 重录。
+- 还需要负责人决定：仓库是否公开（或给面试官加协作者）；是否给本项目单独建一把带额度上限的 OpenRouter key（现在用的是从另一个项目借来的 key，只在本机 `.env.local`，没有进过 git）。

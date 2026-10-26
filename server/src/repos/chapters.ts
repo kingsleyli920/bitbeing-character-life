@@ -7,6 +7,8 @@ interface ChapterRow {
   number: number;
   title: string;
   story_time: string;
+  story_date: string | null;
+  life_areas: string;
   location: string;
   body: string;
   summary: string;
@@ -23,6 +25,8 @@ function toChapter(row: ChapterRow): Chapter {
     number: row.number,
     title: row.title,
     storyTime: row.story_time,
+    storyDate: row.story_date,
+    lifeAreas: JSON.parse(row.life_areas) as string[],
     location: row.location,
     body: row.body,
     summary: row.summary,
@@ -40,13 +44,23 @@ const SELECT = `SELECT c.*, d.text AS direction_text FROM chapters c
 export function insertChapter(
   db: Db,
   storyId: string,
-  row: { id: string; number: number; draft: ChapterDraft; directionId: string | null; jobId: string; now: string },
+  row: {
+    id: string;
+    number: number;
+    draft: ChapterDraft;
+    daysSincePrevious: number;
+    /** The consistency reviewer's main life area; null when the check did not run. */
+    checkedArea: string | null;
+    directionId: string | null;
+    jobId: string;
+    now: string;
+  },
 ): void {
   const { draft } = row;
   db.prepare(
     `INSERT INTO chapters (id, story_id, number, title, story_time, location, body, summary, beat_tags,
-                           direction_id, direction_handling, job_id, created_at, days_since_previous)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                           direction_id, direction_handling, job_id, created_at, days_since_previous, story_date, life_areas, checked_area)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
   ).run(
     row.id,
     storyId,
@@ -61,7 +75,10 @@ export function insertChapter(
     draft.directionHandling ? JSON.stringify(draft.directionHandling) : null,
     row.jobId,
     row.now,
-    draft.daysSincePrevious,
+    row.daysSincePrevious,
+    draft.storyDate,
+    JSON.stringify(draft.lifeAreas),
+    row.checkedArea,
   );
 }
 
@@ -82,23 +99,38 @@ export function getChapter(db: Db, storyId: string, number: number): Chapter | u
   return row && toChapter(row);
 }
 
-export function listToc(db: Db, storyId: string): { number: number; title: string; storyTime: string }[] {
+export function listToc(db: Db, storyId: string): { number: number; title: string; storyTime: string; storyDate: string | null }[] {
   return db
-    .prepare('SELECT number, title, story_time AS storyTime FROM chapters WHERE story_id = ? ORDER BY number')
-    .all(storyId) as unknown as { number: number; title: string; storyTime: string }[];
+    .prepare('SELECT number, title, story_time AS storyTime, story_date AS storyDate FROM chapters WHERE story_id = ? ORDER BY number')
+    .all(storyId) as unknown as { number: number; title: string; storyTime: string; storyDate: string | null }[];
 }
 
 /** Title, summary and beat tags of chapters before `beforeNumber`, oldest first. */
 export function listDigests(db: Db, storyId: string, beforeNumber: number): ChapterDigest[] {
   const rows = db
-    .prepare('SELECT number, title, summary, beat_tags, days_since_previous FROM chapters WHERE story_id = ? AND number < ? ORDER BY number')
-    .all(storyId, beforeNumber) as unknown as { number: number; title: string; summary: string; beat_tags: string; days_since_previous: number | null }[];
+    .prepare(
+      `SELECT number, title, summary, beat_tags, days_since_previous, story_date, life_areas, checked_area
+         FROM chapters WHERE story_id = ? AND number < ? ORDER BY number`,
+    )
+    .all(storyId, beforeNumber) as unknown as {
+    number: number;
+    title: string;
+    summary: string;
+    beat_tags: string;
+    days_since_previous: number | null;
+    story_date: string | null;
+    life_areas: string;
+    checked_area: string | null;
+  }[];
   return rows.map((r) => ({
     number: r.number,
     title: r.title,
     summary: r.summary,
     beatTags: JSON.parse(r.beat_tags),
     daysSincePrevious: r.days_since_previous,
+    storyDate: r.story_date,
+    lifeAreas: JSON.parse(r.life_areas),
+    checkedArea: r.checked_area as ChapterDigest['checkedArea'],
   }));
 }
 

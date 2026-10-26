@@ -1,4 +1,4 @@
-import type { Chapter } from '@cl/shared';
+import { type Chapter, formatStoryDate } from '@cl/shared';
 
 const POST_PREFIX = '【动态】';
 
@@ -32,6 +32,7 @@ export function ChapterView({ chapter }: { chapter: Chapter }) {
           {chapter.title}
         </h3>
         <span className="segment-meta">
+          {chapter.storyDate && `${formatStoryDate(chapter.storyDate)} · `}
           {chapter.storyTime} · {chapter.location}
         </span>
       </header>

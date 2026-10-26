@@ -22,6 +22,8 @@ export interface AppConfig {
   maxAttempts: number;
   jobConcurrency: number;
   fixtureDelayMs: number;
+  /** Review each draft for contradictions with earlier chapters before saving it (SPEC §2.7). */
+  consistencyCheck: boolean;
   webDistDir: string;
 }
 
@@ -42,6 +44,7 @@ const envSchema = z.object({
   MODEL_MAX_ATTEMPTS: int(1).max(5).default(3),
   JOB_CONCURRENCY: int(1).max(8).default(2),
   FIXTURE_DELAY_MS: int(0).default(0),
+  CONSISTENCY_CHECK: z.enum(['on', 'off']).default('on'),
 });
 
 function readArg(argv: readonly string[], name: string): string | undefined {
@@ -87,6 +90,7 @@ export function loadConfig(
     maxAttempts: e.MODEL_MAX_ATTEMPTS,
     jobConcurrency: e.JOB_CONCURRENCY,
     fixtureDelayMs: e.FIXTURE_DELAY_MS,
+    consistencyCheck: e.CONSISTENCY_CHECK === 'on',
     webDistDir: path.join(REPO_ROOT, 'web/dist'),
   };
 }

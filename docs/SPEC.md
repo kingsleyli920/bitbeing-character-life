@@ -112,12 +112,13 @@
 
 ```
 title            2–24 字
-storyTime        故事内时间，如「十月第二个周三，夜」
-daysSincePrevious 距离上一章结尾过去的天数（整数，同一天为 0）
+storyDate        本章开始那天的日期 YYYY-MM-DD（v5；服务端由此推算过了几天和星期几）
+storyTime        时段，如「傍晚」「周三夜里」；写星期几时必须与 storyDate 一致
 location         地点
 body             正文
 summary          60–240 字本章摘要（客观、含因果）
 beatTags         1–4 个桥段标签，如「排练冲突」「父子争吵」
+lifeAreas        1–3 个生活面（固定 10 项：工作学业 / 钱 / 家人 / 感情 / 朋友 / 身体 / 居所日常 / 兴趣爱好 / 邻里社区 / 旧事秘密），第一个是主线（v5）
 state            {time, location, situation, goals[1–4], mood}
 memoryOps[]      {op:'upsert'|'resolve', kind, key, content, importance:1|2|3, status}
 traitChanges[]   0–1 条 {trait, from, to, causeChapters[], explanation}
@@ -125,7 +126,8 @@ directionHandling {applied, how, adjustments} | null
 ```
 
 - `memoryOps.kind`：`person`（key=人名）/ `event` / `promise` / `thread` / `trait`。`upsert` 以 `(story_id, key)` 为键新增或更新内容并追加来源章节；`resolve` 把承诺/线索标记为已解决，`content` 写结果。
-- **硬校验（不通过 → 整个结果作废，按 `MODEL_INVALID_OUTPUT` 重试）**：（截断软长度之后）schema 不符；正文 <400 或 >3000 字；`traitChanges.causeChapters` 不在 `[1, 当前章号]`；有当前走向但 `directionHandling` 为 null；`key` 为空或 >40 字；`finish_reason=length`（按 `MODEL_TRUNCATED`）。
+- **硬校验（不通过 → 整个结果作废，按 `MODEL_INVALID_OUTPUT` 重试）**：（截断软长度之后）schema 不符；正文 <400 或 >3000 字；`traitChanges.causeChapters` 不在 `[1, 当前章号]`；有当前走向但 `directionHandling` 为 null；`key` 为空或 >40 字；`finish_reason=length`（按 `MODEL_TRUNCATED`）；`storyDate` 不存在或早于上一章；`storyTime` 写的星期与 `storyDate` 不符；标题、摘要、桥段标签、状态、记忆里出现正文和上下文都没用过的英文词（v5，例如摘要里的 “answer”）。
+- **重试时说明原因**（v5）：上一次没被采用的原因（校验错误，或 §2.7 的矛盾）以【上一次输出的问题】附在下一次尝试的 prompt 末尾。
 - **软问题（丢弃该条操作并记入任务 `warnings`，不作废整章）**：`resolve` 不存在的 key；`upsert` 已有 key 但 kind 不同（保留原 kind）。
 - **软长度（截断并记入 `warnings`，不作废整章）**：标题、时间、地点、摘要、桥段标签、状态字段、记忆内容、性格变化说明、走向说明超过上限时截断；数组超过数量上限时截掉多余项。正文和记忆 key 不截断（截断正文会切坏故事，截断 key 会改变记忆身份）。
 - 正文、状态、记忆、性格变化、走向说明**在同一个事务里**写入；任何一步失败整体回滚。
@@ -149,8 +151,9 @@ directionHandling {applied, how, adjustments} | null
 | 10 | 更早的相关章节摘要：与状态、走向、未解决线索有人物/关键词重叠的章节 | 预算内 top-k | 丢弃 |
 | 11 | 原文回查：重要度 ≥2 的未解决线索，从其首个来源章节截取含关键词的约 300 字原文 | 预算内，最多 3 段 | 丢弃 |
 | 12 | 「沉睡线索」：超过 10 章未提及的未解决线索，提示「可以考虑在合适时机回收」 | 最多 2 条 | 丢弃 |
-| 13 | 「需要收束的线索」：重要度 ≥2、已悬 ≥12 章的未解决线索（最老的 2 条），要求 1–3 章内给出明确结果 | 有则必带 | 不裁 |
-| 14 | 「节奏提示」：未解决线索 >10 条时不再开新线索；最近 8 章中有 ≥6 章围绕同一线索时提示转向生活的其他部分或给出决定性进展；最近 5 章累计 `daysSincePrevious` < 3 天时要求本章明显推进时间（v4） | 有则必带 | 不裁 |
+| 13 | 「需要收束的线索」：重要度 ≥2（承诺不论重要度，v5）、已悬 ≥12 章的未解决线索（最老的 2 条），要求 1–3 章内给出明确结果 | 有则必带 | 不裁 |
+| 14 | 「节奏提示」：未解决线索 >10 条时不再开新线索；最近 8 章中有 ≥6 章围绕同一线索时提示转向生活的其他部分或给出决定性进展；最近 5 章累计不到 7 天时要求从 1–4 周后开始（v5，v4 为 <3 天“明显推进”）；新一卷的第一章建议跳过两周到两个月（最近 5 章已有 ≥14 天的跳跃时不提）；最近 10 章里同一个生活面做了 ≥5 次主线时，点名最久没写到的 3 个生活面，请本章换主线（有走向时不提，读者的走向优先）。v6 起“主线”以一致性检查给出的 `mainArea` 为准（模型给自己标的生活面偏乐观：v5 长测里自标“旧事秘密”27%，独立分类 65%）；提示了换主线、检查仍读出原来的生活面时，按 §2.7 重写 | 有则必带 | 不裁 |
+| 15 | 「故事日历」（v5）：第 1 章请模型按角色卡选开始日期；之后给出上一章的日期、星期、故事第几天，以及当天 / 1、2、3、5、7、10、14、21、30、45、60 天后的日期和星期对照 | 必带 | 不裁 |
 
 ### 2.4 卷摘要
 
@@ -160,13 +163,29 @@ directionHandling {applied, how, adjustments} | null
 
 - **遗忘**：未解决承诺/线索每章必带（§2.3 第 5 项）；沉睡线索主动提示回收；人物按「最近出现 + 被线索引用」选取；卷摘要覆盖全程。
 - **重复**：最近 15 章的标题和桥段标签放进 prompt，要求不要重演同类桥段；评测里自动统计桥段标签重复率和章节间 4-gram 重合度（`docs/EVALUATION.md`）。
-- **停滞**（v3，来自 101 章实测）：线索老化（§2.3 第 13 项）、线索数量上限与题材轮换（第 14 项）、系统 prompt 要求“这是生活故事，不是悬疑小说”、每 3–5 章至少一次明显的时间推进。评测统计线索收束率、最老未解决线索的年龄、卷摘要中“仍未确认”的次数。
+- **停滞**（v3，来自 101 章实测）：线索老化（§2.3 第 13 项）、线索数量上限与题材轮换（第 14 项）、系统 prompt 要求“这是生活故事，不是悬疑小说”。评测统计线索收束率、最老未解决线索的年龄、卷摘要中“仍未确认”的次数。
+- **时间**（v5，来自 v4 实测：时间每次只跳 1–3 天、星期和日期对不上）：日历由服务端掌握。模型只报本章日期，服务端校验不倒流、星期一致，并在上下文里给出日期对照（第 15 项）；节奏规则要求推进太慢时跳 1–4 周（第 14 项）。评测统计故事跨度、≥7 天的跳跃次数、星期不一致次数。
+- **题材单一**（v5，来自 v4 实测：101 段始终在“追查旧事”）：每章标注生活面，同一生活面连续占主线时点名换线（第 14 项）。评测统计主线生活面分布、任意 10 章窗口里最大占比；离线审计用同一个分类器给 v4、v5 打标签对比。
+- **细节矛盾**：提交前一致性检查（§2.7）。
 - **人设**：基础设定不可改。性格/状态的变化只能通过 `traitChanges` 记录，必须给出起因章节和解释；服务端校验起因章节存在。prompt 要求：变化要有事件铺垫，单章内不出现性格突变。
 - **可读性**（写进系统 prompt）：具体场景 + 人物行动 + 对话 + 本章后果；不写流水账；不在结尾重复总结；不要求每章反转；配角各有口吻；保持角色卡的表达方式与叙述形式。
 
 ### 2.6 Prompt 版本
 
-`PROMPT_VERSION` 常量（如 `v1`）记录在每个任务与模型调用上；修改 prompt 文本必须递增版本，便于评测结果对应。
+`PROMPT_VERSION` 常量（当前 `chapter-v6`；一致性检查 `consistency-v3`，补全设定 `profile-v1`）记录在每个任务与模型调用上；修改 prompt 文本必须递增版本，便于评测结果对应。
+
+### 2.7 一致性检查（v5，`server/src/services/consistency.ts`）
+
+草稿通过 §2.2 的校验后、提交前，用同一个模型做一次小调用（`purpose=consistency`，最多 30 秒）：
+
+- **输入**：上一章结束时的状态、此前全部章节摘要（带日期；v3 起不再只给最近 15 章，因为实测里矛盾常常指向几十章之前）、人物（最多 30 个）、进行中的承诺/线索/重要事件、已有结果的事（最多 20 条）、上一章原文、新章节全文。约 5–9k token。
+- **输出** `{issues: [{quote, conflict, chapter, severity: hard|soft}], mainArea}`（issues ≤5 条；`mainArea` 是检查器读出的本章主线生活面，存入 `chapters.checked_area`）。`quote` 必须能在新章节正文里找到（忽略空白和引号），找不到的视为误报直接丢弃。
+- **hard**：还有重写机会（未到最大尝试次数、剩余时间 ≥ 单次超时的一半）就作废这一版，把矛盾原文作为【上一次输出的问题】立即重写（不退避）；否则保存并把矛盾写进 `warnings`。被拒的完整草稿留作后备：之后的尝试全部失败时，保存它并附警告，而不是让任务失败。
+- **soft**：不重写，记入 `warnings`。
+- **主线没换**（v6）：本章上下文要求换主线（§2.3 第 14 项），而 `mainArea` 仍是要离开的那个生活面，与 hard 一样重写，反馈里点名可选的生活面；重写机会用完就保存并记警告。
+- 判定口径（`consistency-v2`）：剧情揭晓（明确写出“原来……”，推翻人物原来的认识）不算矛盾；东西放在哪里、措辞这类不影响情节的小出入记为 soft。v1 在实测中把一次揭晓判成矛盾，也为小出入触发过重写（EVALUATION §6）。
+- 检查本身失败（超时、错误、输出不合格）、费用到上限、剩余时间不足 5 秒：跳过检查直接保存，`warnings` 里写明“一致性检查未完成”。检查永远不会让一章失败。
+- `CONSISTENCY_CHECK=off` 关闭。费用和 token 记入同一任务的用量。
 
 ---
 
@@ -194,7 +213,7 @@ POST /jobs ─► queued ─► running ─► succeeded
 | T2 | 同一故事同时只能有一个进行中的任务；第二个不同 `requestId` 返回 409 `JOB_IN_PROGRESS` + 进行中任务 | 部分唯一索引 `UNIQUE(story_id) WHERE status IN ('queued','running')` |
 | T3 | 迟到或过期的结果不能写入 | 提交事务里检查：任务仍是 `running` 且 `story.version == job.base_version` 且 `story.chapter_count + 1 == job.target_chapter`；不满足则标记 `stale` 并丢弃；提交成功 `story.version += 1` |
 | T4 | 角色、故事之间数据不串；访问不属于该故事的任务/章节返回 404 | 所有仓储函数第一个参数是 `storyId`，SQL 一律带 `story_id = ?` |
-| T5 | 超时、429、5xx/网络错误、非法输出、截断：最多 3 次尝试，单次超时 `MODEL_ATTEMPT_TIMEOUT_MS`（默认 90s），整个任务截止 `JOB_DEADLINE_MS`（默认 180s）；超过即失败 | 退避 2s、5s；429 遵循 `Retry-After`（最多 20s）；剩余时间不够一次尝试就不再尝试 |
+| T5 | 超时、429、5xx/网络错误、非法输出、截断：最多 3 次尝试，单次超时 `MODEL_ATTEMPT_TIMEOUT_MS`（默认 90s），整个任务截止 `JOB_DEADLINE_MS`（默认 180s）；超过即失败（一致性检查的重写也算一次尝试，§2.7） | 退避 2s、5s；429 遵循 `Retry-After`（最多 20s）；剩余时间不够一次尝试就不再尝试 |
 | T6 | 服务重启后，原 `queued/running` 任务变成 `interrupted`，不自动重新调用模型 | 启动时一条 `UPDATE`；测试断言假模型调用次数不变 |
 | T7 | 生成中修改走向，本章使用任务创建时锁定的走向；新走向从下一章生效 | `jobs.direction_id` 在创建时写入，生成只读它 |
 | T8 | 提交事务中任一步失败，整体回滚，上一份有效状态不变 | 单事务 + 显式 `ROLLBACK`；测试注入失败 |
@@ -223,7 +242,7 @@ POST /jobs ─► queued ─► running ─► succeeded
 
 ### 3.4 可观测性
 
-- `model_calls` 每次尝试一行：任务 ID、用途（`chapter` / `arc_summary`）、模型、实际服务商、prompt 版本、开始时间、耗时、结果、错误码、`finish_reason`、输入/输出/推理 token、费用、费用来源（`reported`：OpenRouter `usage.cost`；`estimated`：按 `config.pricing` 估算；`unknown`）。服务商没返回的指标存 `NULL`，界面显示「未知」。
+- `model_calls` 每次尝试一行：任务 ID、用途（`chapter` / `arc_summary` / `profile` / `consistency`）、模型、实际服务商、prompt 版本、开始时间、耗时、结果、错误码、`finish_reason`、输入/输出/推理 token、费用、费用来源（`reported`：OpenRouter `usage.cost`；`estimated`：按 `config.pricing` 估算；`unknown`）。服务商没返回的指标存 `NULL`，界面显示「未知」。
 - 完整 prompt 与原始输出存在 `model_calls.request_json / response_text`（仅本地库，用于排查和评测），日志里不打印。
 - 日志：Fastify 内置 pino，`redact` 掉 `authorization` 头；只记录任务 ID、模型、prompt 版本、耗时、重试次数、token、费用。
 - **API key** 只从环境变量读取，不进前端、不进 git、不进日志或截图。
@@ -277,7 +296,9 @@ directions(id TEXT PK, story_id TEXT FK, text TEXT, created_at TEXT, cleared_at 
            effective_from_chapter INTEGER)
 chapters(id TEXT PK, story_id TEXT FK, number INTEGER, title TEXT, story_time TEXT, location TEXT,
          body TEXT, summary TEXT, beat_tags TEXT, direction_id TEXT NULL, direction_handling TEXT NULL,
-         job_id TEXT, created_at TEXT, days_since_previous INTEGER NULL /* v3 */, UNIQUE(story_id, number))
+         job_id TEXT, created_at TEXT, days_since_previous INTEGER NULL /* v3；v5 起由日期推算 */,
+         story_date TEXT NULL /* v4 */, life_areas TEXT DEFAULT '[]' /* v4 */,
+         checked_area TEXT NULL /* v5：一致性检查读出的主线生活面 */, UNIQUE(story_id, number))
 memories(id TEXT PK, story_id TEXT FK, kind TEXT, key TEXT, content TEXT, importance INTEGER,
          status TEXT CHECK(status IN ('active','open','resolved')), source_chapters TEXT,
          first_chapter INTEGER, last_chapter INTEGER, updated_at TEXT, UNIQUE(story_id, key))
@@ -292,6 +313,7 @@ jobs(id TEXT PK, story_id TEXT FK, request_id TEXT, status TEXT, base_version IN
      finished_at TEXT NULL, UNIQUE(story_id, request_id))
 CREATE UNIQUE INDEX one_active_job ON jobs(story_id) WHERE status IN ('queued','running');
 -- v2：job_id / story_id 可为空、不级联删除（删除角色后费用记录仍保留），新增 character_id、error_message，purpose 增加 'profile'
+-- v4：purpose 增加 'consistency'
 model_calls(id TEXT PK, job_id TEXT NULL, story_id TEXT NULL, character_id TEXT NULL, purpose TEXT, attempt INTEGER, model TEXT,
             provider TEXT NULL, prompt_version TEXT, started_at TEXT, latency_ms INTEGER,
             outcome TEXT, error_code TEXT NULL, error_message TEXT NULL, finish_reason TEXT NULL, input_tokens INTEGER NULL,
@@ -340,6 +362,7 @@ model_calls(id TEXT PK, job_id TEXT NULL, story_id TEXT NULL, character_id TEXT 
 | `CONTEXT_BUDGET_TOKENS` | `12000` | |
 | `MODEL_ATTEMPT_TIMEOUT_MS` / `JOB_DEADLINE_MS` / `MODEL_MAX_ATTEMPTS` | 90000 / 180000 / 3 | |
 | `JOB_CONCURRENCY` | 2 | |
+| `CONSISTENCY_CHECK` | `on` | `off` 关闭提交前的一致性检查（§2.7） |
 
 ### 4.6 前端
 
@@ -385,7 +408,8 @@ typecheck → L1 → L3/L4 全过后才跑 Playwright（L2 → L5）。后端改
 | 故事/章节 | 新故事快照角色卡；章节号连续；分页；跨故事访问 404（T4）；两个故事的记忆互不影响 |
 | 生成任务 | T1、T2、T3（迟到结果、版本变化两种）、T5（每种错误各一例 + 次数上限 + 截止时间）、T6、T7、T8、T10；拒绝不重试；未配置 key 的明确错误 |
 | 记忆 | upsert 新增/更新/追加来源；resolve；软问题丢弃并记 warning；traitChange 起因章校验 |
-| 上下文 | 各段优先级；超预算裁剪顺序；未解决线索全部保留（T9）；原文回查片段；沉睡线索；卷摘要缺失时降级 |
+| 上下文 | 各段优先级；超预算裁剪顺序；未解决线索全部保留（T9）；原文回查片段；沉睡线索；卷摘要缺失时降级；故事日历（第 1 章 / 有日期 / 旧章节无日期）；时间跳跃、新卷、生活面轮换（有走向时不提）、小承诺老化 |
+| 校验与一致性 | 日期倒流、星期不符、混入英文词各被拒并把原因告诉下一次尝试；一致性检查：无问题直接保存、hard 重写、重写用完带警告保存、重写失败退回后备草稿、soft 只记警告、引文不在正文里的丢弃、检查失败不阻塞、可关闭 |
 | 走向 | 设置/替换/清除；空或超长 400；生成锁定（T7）；章节记录 `direction_id` 与 `direction_handling` |
 | 前端 | 三态；生成中进度；失败与重试；双击只发一次；刷新恢复任务；走向提示；导入错误逐字段显示；目录跳转；小屏布局 |
 | 导出 | Markdown 含全部章节标题与正文 |
