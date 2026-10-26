@@ -52,7 +52,7 @@ SQLite（node:sqlite，单文件）   OpenRouter → Claude Haiku 5.5（结构�
 | 后端 | Fastify 5 | 轻量，`inject()` 便于功能测试 |
 | 存储 | SQLite（Node 24 内置的 `node:sqlite`） | 零依赖、单文件、有事务；Demo 规模足够；约束（UNIQUE、部分索引）直接用来保证并发正确性 |
 | 前端 | React 19 + react-router 8 + react-query 5 + Vite 8 | 请求缓存和轮询交给 react-query |
-| 模型 | OpenRouter → `anthropic/claude-haiku-5.5` | 选型时对比了 5 个便宜模型，它对 schema 的遵守最稳、记忆提取质量最好、价格低（约 $0.002/段） |
+| 模型 | OpenRouter → `anthropic/claude-haiku-5.5` | 选型时对比了 5 个便宜模型，它对 schema 的遵守最稳、记忆提取质量最好、价格低（开头几段约 $0.002/段；长篇后期上下文贴满预算，加上一致性检查和重写，约 $0.008/段；101 段共 $0.86） |
 | 测试 | Vitest + Testing Library + MSW + Playwright | 7 层测试，见 §5 |
 
 ---
